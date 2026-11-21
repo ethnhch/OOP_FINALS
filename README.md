@@ -17,6 +17,8 @@ A robust, object-oriented School Equipment Borrowing Management System implement
 - `BorrowingController`: Central coordinator processing borrowing transactions, return evaluations, fine calculations, and clearance hold enforcement.
 
 ## Getting Started in Visual Studio
-1. Open `SchoolBorrowingSystem.sln` in Visual Studio 2019/2022.
-2. Build the solution (`Ctrl + Shift + B`).
-3. Press `F5` to run either the interactive management console or automated QA test scenarios.
+1. Open `SchoolBorrowingSystem.sln` in Visual Studio.
+2. Build the solution using `Ctrl + Shift + B`.
+3. Press `F5` to run:
+   - System validates all 44 test assertions.
+   - Pressing any key opens the Interactive Dashboard (borrow, return, view inventory, repair equipment, apply/lift clearance holds, save inventory).
