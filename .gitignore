@@ -1,0 +1,13 @@
+## Visual Studio build and cache artifacts
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Output data
+*.json
+!appsettings.json
+*.log
