@@ -74,12 +74,21 @@ namespace SchoolBorrowingSystem.UI.Pages
 
             _countLabel = Theme.MakeLabel("", Theme.SmallFont, Theme.TextMuted);
             _countLabel.Dock = DockStyle.Bottom;
-            _countLabel.Padding = new Padding(0, 8, 0, 0);
+            _countLabel.Padding = Theme.ScalePadding(0, 8, 0, 0);
 
             ContentArea.Controls.Add(card);
             ContentArea.Controls.Add(_countLabel);
             ContentArea.Controls.Add(actionRow);
             ContentArea.Controls.Add(searchRow);
+        }
+
+        /// <summary>
+        /// Narrow window: hide Role and Department so names and clearance status stay readable.
+        /// </summary>
+        protected override void ApplyLayout(bool isNarrow)
+        {
+            Theme.SetColumnsVisible(_grid, !isNarrow, "Role", "Department");
+            _searchBox.Width = Theme.Scale(isNarrow ? 200 : 260);
         }
 
         public override void RefreshData()

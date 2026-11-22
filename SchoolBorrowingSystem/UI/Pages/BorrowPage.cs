@@ -22,6 +22,10 @@ namespace SchoolBorrowingSystem.UI.Pages
         private ListBox _checklistBox;
         private Button _issueButton;
 
+        private TableLayoutPanel _columns;
+        private CardPanel _formCard;
+        private CardPanel _slipCard;
+
         private TextBox _slipText;
         private Button _copyButton;
 
@@ -33,18 +37,60 @@ namespace SchoolBorrowingSystem.UI.Pages
 
         private void BuildLayout()
         {
-            // Two cards side by side: the form on the left, the slip on the right
-            TableLayoutPanel columns = new TableLayoutPanel();
-            columns.Dock = DockStyle.Fill;
-            columns.ColumnCount = 2;
-            columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            columns.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            // Two cards: the form and the slip.
+            // ApplyLayout puts them side by side (wide) or one above the other (narrow).
+            _formCard = BuildFormCard();
+            _slipCard = BuildSlipCard();
 
-            columns.Controls.Add(BuildFormCard(), 0, 0);
-            columns.Controls.Add(BuildSlipCard(), 1, 0);
+            _columns = new TableLayoutPanel();
+            _columns.Controls.Add(_formCard);
+            _columns.Controls.Add(_slipCard);
 
-            ContentArea.Controls.Add(columns);
+            ContentArea.Controls.Add(_columns);
+        }
+
+        protected override void ApplyLayout(bool isNarrow)
+        {
+            int gap = Theme.Scale(16);
+            _columns.ColumnStyles.Clear();
+            _columns.RowStyles.Clear();
+
+            if (isNarrow)
+            {
+                // One column: form on top, slip underneath. The page scrolls if needed.
+                int formHeight = Theme.Scale(620);
+                int slipHeight = Theme.Scale(440);
+
+                _columns.ColumnCount = 1;
+                _columns.RowCount = 2;
+                _columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+                _columns.RowStyles.Add(new RowStyle(SizeType.Absolute, formHeight));
+                _columns.RowStyles.Add(new RowStyle(SizeType.Absolute, slipHeight));
+                _columns.SetCellPosition(_formCard, new TableLayoutPanelCellPosition(0, 0));
+                _columns.SetCellPosition(_slipCard, new TableLayoutPanelCellPosition(0, 1));
+                _formCard.Margin = new Padding(0, 0, 0, gap);
+                _slipCard.Margin = new Padding(0, 0, 0, gap);
+
+                _columns.Dock = DockStyle.Top;
+                _columns.Height = formHeight + slipHeight;
+                ContentArea.AutoScroll = true;
+            }
+            else
+            {
+                // Two columns side by side, filling the page
+                _columns.ColumnCount = 2;
+                _columns.RowCount = 1;
+                _columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+                _columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+                _columns.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+                _columns.SetCellPosition(_formCard, new TableLayoutPanelCellPosition(0, 0));
+                _columns.SetCellPosition(_slipCard, new TableLayoutPanelCellPosition(1, 0));
+                _formCard.Margin = new Padding(0, 0, gap, gap);
+                _slipCard.Margin = new Padding(0, 0, 0, gap);
+
+                ContentArea.AutoScroll = false;
+                _columns.Dock = DockStyle.Fill;
+            }
         }
 
         private CardPanel BuildFormCard()
@@ -95,14 +141,14 @@ namespace SchoolBorrowingSystem.UI.Pages
             _checklistBox.BorderStyle = BorderStyle.FixedSingle;
             _checklistBox.BackColor = Theme.PageBackground;
             _checklistBox.Dock = DockStyle.Fill;
-            _checklistBox.Height = 110;
+            _checklistBox.Height = Theme.Scale(110);
             _checklistBox.SelectionMode = SelectionMode.None;
             AddRow(form, _checklistBox, 16);
 
             // Big button
             _issueButton = Theme.MakeButton("Issue Borrow Slip", Theme.Primary);
             _issueButton.Dock = DockStyle.Fill;
-            _issueButton.Height = 44;
+            _issueButton.Height = Theme.Scale(44);
             _issueButton.AutoSize = false;
             _issueButton.Margin = new Padding(0);
             _issueButton.Click += IssueButton_Click;
@@ -120,11 +166,11 @@ namespace SchoolBorrowingSystem.UI.Pages
         {
             CardPanel card = new CardPanel();
             card.Dock = DockStyle.Fill;
-            card.Margin = new Padding(0, 0, 0, 16);
+            card.Margin = Theme.ScalePadding(0, 0, 0, 16);
 
             Label title = Theme.MakeLabel("2. Borrow slip", Theme.SectionFont, Theme.TextDark);
             title.Dock = DockStyle.Top;
-            title.Padding = new Padding(0, 0, 0, 12);
+            title.Padding = Theme.ScalePadding(0, 0, 0, 12);
 
             _slipText = new TextBox();
             _slipText.Multiline = true;
@@ -139,7 +185,7 @@ namespace SchoolBorrowingSystem.UI.Pages
             FlowLayoutPanel buttons = new FlowLayoutPanel();
             buttons.Dock = DockStyle.Bottom;
             buttons.AutoSize = true;
-            buttons.Padding = new Padding(0, 12, 0, 0);
+            buttons.Padding = Theme.ScalePadding(0, 12, 0, 0);
 
             _copyButton = Theme.MakeSecondaryButton("Copy Slip");
             _copyButton.Enabled = false;
@@ -154,7 +200,7 @@ namespace SchoolBorrowingSystem.UI.Pages
 
         private void AddRow(TableLayoutPanel table, Control control, int spaceBelow)
         {
-            control.Margin = new Padding(0, 0, 0, spaceBelow);
+            control.Margin = Theme.ScalePadding(0, 0, 0, spaceBelow);
 
             // Fill the width of the column (this also lets long labels wrap onto 2 lines)
             control.Dock = DockStyle.Fill;

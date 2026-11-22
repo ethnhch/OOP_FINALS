@@ -3,6 +3,10 @@
 A Windows Forms app (C# / .NET 8) for a school equipment office: lend projectors and lab equipment,
 check them back in, charge fines, and manage clearance holds.
 
+![Borrow page](docs/images/borrow-wide.png)
+
+**See [docs/CHANGES.md](docs/CHANGES.md) for a full explanation of every change in this version (what and why).**
+
 ## Getting Started in Visual Studio
 1. Open `SchoolBorrowingSystem.sln` in Visual Studio 2022.
 2. Build with `Ctrl + Shift + B`.
@@ -23,6 +27,14 @@ The sidebar on the left switches between pages (shortcut: `Ctrl+1` to `Ctrl+7`, 
 | **History** | Every completed return with its condition and fine. |
 | **Tests** | Runs all 57 automated tests and shows the results. |
 
+## Responsive Layout
+The window works from full screen down to 760 × 540, and at 125% / 150% Windows display scaling.
+- **Narrow window:** the sidebar collapses to icons (or use the ☰ menu button), the dashboard cards wrap 2 × 2,
+  Borrow and Return stack vertically and scroll, and less important table columns hide.
+- **High-DPI screens:** every pixel size goes through `Theme.Scale(...)`, so text and controls never overlap.
+
+Details: [docs/CHANGES.md → Responsive layout](docs/CHANGES.md#3-responsive-layout)
+
 ## Business Rules
 | Rule | AV Equipment | Lab Equipment |
 | --- | --- | --- |
@@ -40,19 +52,24 @@ SchoolBorrowingSystem/
 ├── Transactions/        BorrowSlip
 ├── Controllers/         EquipmentController, BorrowingController, BorrowerController
 ├── UI/
-│   ├── MainForm.cs      Window with the sidebar and status bar
-│   ├── Theme.cs         All colors, fonts and styled-control helpers
+│   ├── MainForm.cs      Window with the collapsible sidebar and status bar
+│   ├── NavButton.cs     Sidebar button (icon + label, icon only when collapsed)
+│   ├── Theme.cs         Colors, fonts, screen scaling and styled-control helpers
 │   ├── AudioHelper.cs   Small sound effects (played in the background)
 │   ├── Pages/           One class per sidebar page (all inherit BasePage)
 │   └── Dialogs/         Add Equipment / Add Borrower pop-ups (inherit BaseDialog)
 ├── Program.cs           Starts the app and adds sample data
 └── TestRunner.cs        Automated tests
+docs/
+├── CHANGES.md           What changed and why
+└── images/              Screenshots
 ```
 
 ## OOP Concepts Used
 - **Abstraction** – `SchoolEquipment` is abstract and defines what every item must be able to do.
 - **Encapsulation** – private fields with public properties; controllers return *copies* of their lists.
 - **Inheritance** – `AVEquipment` / `LabEquipment` extend `SchoolEquipment`; every page extends `BasePage`; dialogs extend `BaseDialog`.
+  Pages override `BasePage.ApplyLayout(isNarrow)` to rearrange themselves.
 - **Polymorphism** – each equipment type calculates its own due time (`CalculateDueTime`), late fine
   (`CalculateLateFine`) and return checklist (`GetReturnChecklist`), so `BorrowingController` never needs
   to check `if (item is AVEquipment)`.

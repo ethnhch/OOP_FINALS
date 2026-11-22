@@ -88,12 +88,22 @@ namespace SchoolBorrowingSystem.UI.Pages
 
             _countLabel = Theme.MakeLabel("", Theme.SmallFont, Theme.TextMuted);
             _countLabel.Dock = DockStyle.Bottom;
-            _countLabel.Padding = new Padding(0, 8, 0, 0);
+            _countLabel.Padding = Theme.ScalePadding(0, 8, 0, 0);
 
             ContentArea.Controls.Add(card);
             ContentArea.Controls.Add(_countLabel);
             ContentArea.Controls.Add(actionRow);
             ContentArea.Controls.Add(searchRow);
+        }
+
+        /// <summary>
+        /// Narrow window: hide the columns people need least, and make the search box smaller.
+        /// Tag, Name, Condition and Status always stay visible.
+        /// </summary>
+        protected override void ApplyLayout(bool isNarrow)
+        {
+            Theme.SetColumnsVisible(_grid, !isNarrow, "Category", "Loan", "Details");
+            _searchBox.Width = Theme.Scale(isNarrow ? 200 : 260);
         }
 
         public override void RefreshData()

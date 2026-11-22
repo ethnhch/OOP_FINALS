@@ -38,6 +38,75 @@ namespace SchoolBorrowingSystem.UI
         public static readonly Font BigNumberFont = new Font(FontName, 26F, FontStyle.Bold);
         public static readonly Font MonoFont = new Font("Consolas", 10F);
 
+        // ---------------- Icons ----------------
+        // "Segoe MDL2 Assets" is the icon font built into Windows 10 and 11.
+        // Each icon is one character. If the font is missing we just show text instead.
+        public const string IconFontName = "Segoe MDL2 Assets";
+        public static readonly Font IconFont = new Font(IconFontName, 13F);
+        public static readonly bool HasIconFont = IconFont.Name == IconFontName;
+
+        public const string IconDashboard = "\uE80F";  // house
+        public const string IconInventory = "\uE8F1";  // books on a shelf
+        public const string IconBorrow = "\uE710";     // plus sign
+        public const string IconReturn = "\uE7A7";     // undo arrow
+        public const string IconBorrowers = "\uE716";  // people
+        public const string IconHistory = "\uE81C";    // clock with arrow
+        public const string IconTests = "\uE9D5";      // checklist
+        public const string IconMenu = "\uE700";       // three lines (hamburger)
+        public const string IconSoundOn = "\uE767";    // speaker
+        public const string IconSoundOff = "\uE74F";   // muted speaker
+
+        // ---------------- Screen scaling ----------------
+        // On laptops Windows is often set to 125% or 150% "scale".
+        // Fonts grow automatically, but sizes we write in pixels (like Height = 40) do not.
+        // So every pixel size goes through Scale(...) to grow by the same amount.
+        public static readonly float ScaleFactor = ReadScreenScale();
+
+        private static float ReadScreenScale()
+        {
+            try
+            {
+                using (Graphics g = Graphics.FromHwnd(IntPtr.Zero))
+                {
+                    return g.DpiX / 96F; // 96 DPI = 100%
+                }
+            }
+            catch (Exception)
+            {
+                return 1F;
+            }
+        }
+
+        public static int Scale(int pixels)
+        {
+            return (int)Math.Round(pixels * ScaleFactor);
+        }
+
+        public static Size Scale(int width, int height)
+        {
+            return new Size(Scale(width), Scale(height));
+        }
+
+        public static Padding ScalePadding(int left, int top, int right, int bottom)
+        {
+            return new Padding(Scale(left), Scale(top), Scale(right), Scale(bottom));
+        }
+
+        /// <summary>
+        /// Shows or hides some columns of a table. Used to hide less important
+        /// columns when the window is too narrow to show everything.
+        /// </summary>
+        public static void SetColumnsVisible(DataGridView grid, bool visible, params string[] columnNames)
+        {
+            foreach (string name in columnNames)
+            {
+                if (grid.Columns.Contains(name))
+                {
+                    grid.Columns[name].Visible = visible;
+                }
+            }
+        }
+
         // ---------------- Helpers ----------------
 
         /// <summary>Makes a color a little darker (used for hover effects).</summary>
@@ -72,9 +141,9 @@ namespace SchoolBorrowingSystem.UI
             button.FlatAppearance.MouseDownBackColor = Darken(color, 0.22);
             button.Cursor = Cursors.Hand;
             button.AutoSize = true;
-            button.MinimumSize = new Size(110, 38);
-            button.Padding = new Padding(12, 0, 12, 0);
-            button.Margin = new Padding(0, 0, 8, 0);
+            button.MinimumSize = Scale(110, 38);
+            button.Padding = ScalePadding(12, 0, 12, 0);
+            button.Margin = ScalePadding(0, 0, 8, 8);
             button.UseVisualStyleBackColor = false;
             button.EnabledChanged += Button_EnabledChanged;
             return button;
@@ -125,9 +194,9 @@ namespace SchoolBorrowingSystem.UI
         {
             TextBox box = new TextBox();
             box.Font = NormalFont;
-            box.Width = 260;
+            box.Width = Scale(260);
             box.PlaceholderText = placeholder;
-            box.Margin = new Padding(0, 6, 8, 0);
+            box.Margin = ScalePadding(0, 6, 8, 8);
             return box;
         }
 
@@ -136,8 +205,8 @@ namespace SchoolBorrowingSystem.UI
             ComboBox combo = new ComboBox();
             combo.DropDownStyle = ComboBoxStyle.DropDownList;
             combo.Font = NormalFont;
-            combo.Width = width;
-            combo.Margin = new Padding(0, 6, 8, 0);
+            combo.Width = Scale(width);
+            combo.Margin = ScalePadding(0, 6, 8, 8);
             return combo;
         }
 
@@ -159,23 +228,23 @@ namespace SchoolBorrowingSystem.UI
             grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             grid.GridColor = Border;
             grid.Font = NormalFont;
-            grid.RowTemplate.Height = 36;
+            grid.RowTemplate.Height = Scale(36);
 
             // Header row
             grid.EnableHeadersVisualStyles = false;
             grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
             grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            grid.ColumnHeadersHeight = 40;
+            grid.ColumnHeadersHeight = Scale(40);
             grid.ColumnHeadersDefaultCellStyle.BackColor = PageBackground;
             grid.ColumnHeadersDefaultCellStyle.ForeColor = TextMuted;
             grid.ColumnHeadersDefaultCellStyle.Font = new Font(FontName, 9F, FontStyle.Bold);
-            grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 0, 0);
+            grid.ColumnHeadersDefaultCellStyle.Padding = ScalePadding(8, 0, 0, 0);
             grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = PageBackground;
 
             // Normal rows
             grid.DefaultCellStyle.BackColor = CardBackground;
             grid.DefaultCellStyle.ForeColor = TextDark;
-            grid.DefaultCellStyle.Padding = new Padding(8, 0, 0, 0);
+            grid.DefaultCellStyle.Padding = ScalePadding(8, 0, 0, 0);
             grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(219, 234, 254);
             grid.DefaultCellStyle.SelectionForeColor = TextDark;
             grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
@@ -191,6 +260,7 @@ namespace SchoolBorrowingSystem.UI
             column.HeaderText = headerText;
             column.FillWeight = weight;
             column.SortMode = DataGridViewColumnSortMode.NotSortable;
+            column.MinimumWidth = Scale(60);
             grid.Columns.Add(column);
         }
 
@@ -263,8 +333,8 @@ namespace SchoolBorrowingSystem.UI
         public CardPanel()
         {
             BackColor = Theme.CardBackground;
-            Padding = new Padding(20);
-            Margin = new Padding(0, 0, 16, 16);
+            Padding = Theme.ScalePadding(20, 20, 20, 20);
+            Margin = Theme.ScalePadding(0, 0, 16, 16);
             DoubleBuffered = true;
             ResizeRedraw = true;
         }

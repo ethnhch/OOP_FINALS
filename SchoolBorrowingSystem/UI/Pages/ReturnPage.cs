@@ -14,6 +14,15 @@ namespace SchoolBorrowingSystem.UI.Pages
     /// </summary>
     public class ReturnPage : BasePage
     {
+        // Containers that ApplyLayout rearranges
+        private TableLayoutPanel _rows;
+        private CardPanel _loansCard;
+        private CardPanel _checkCard;
+        private TableLayoutPanel _checkColumns;
+        private Panel _checklistColumn;
+        private Control _conditionColumn;
+        private Panel _fineColumn;
+
         private DataGridView _grid;
         private Label _noLoansLabel;
 
@@ -36,29 +45,87 @@ namespace SchoolBorrowingSystem.UI.Pages
 
         private void BuildLayout()
         {
-            TableLayoutPanel rows = new TableLayoutPanel();
-            rows.Dock = DockStyle.Fill;
-            rows.RowCount = 2;
-            rows.ColumnCount = 1;
-            rows.RowStyles.Add(new RowStyle(SizeType.Percent, 45F));
-            rows.RowStyles.Add(new RowStyle(SizeType.Percent, 55F));
-            rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            // Top: the loans table. Bottom: the "check the item" card.
+            _loansCard = BuildLoansCard();
+            _checkCard = BuildCheckCard();
 
-            rows.Controls.Add(BuildLoansCard(), 0, 0);
-            rows.Controls.Add(BuildCheckCard(), 0, 1);
+            _rows = new TableLayoutPanel();
+            _rows.ColumnCount = 1;
+            _rows.RowCount = 2;
+            _rows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            _rows.Controls.Add(_loansCard, 0, 0);
+            _rows.Controls.Add(_checkCard, 0, 1);
 
-            ContentArea.Controls.Add(rows);
+            ContentArea.Controls.Add(_rows);
+        }
+
+        /// <summary>
+        /// Wide:   loans table on top, then  [checklist | condition | fine]  side by side.
+        /// Narrow: everything stacked and the page scrolls:
+        ///         loans table, then the checklist full width, then [condition | fine].
+        /// </summary>
+        protected override void ApplyLayout(bool isNarrow)
+        {
+            _rows.RowStyles.Clear();
+            _checkColumns.ColumnStyles.Clear();
+            _checkColumns.RowStyles.Clear();
+
+            if (isNarrow)
+            {
+                int loansHeight = Theme.Scale(280);
+                int checkHeight = Theme.Scale(600);
+                _rows.RowStyles.Add(new RowStyle(SizeType.Absolute, loansHeight));
+                _rows.RowStyles.Add(new RowStyle(SizeType.Absolute, checkHeight));
+                _rows.Dock = DockStyle.Top;
+                _rows.Height = loansHeight + checkHeight;
+                ContentArea.AutoScroll = true;
+
+                _checkColumns.ColumnCount = 2;
+                _checkColumns.RowCount = 2;
+                _checkColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
+                _checkColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
+                _checkColumns.RowStyles.Add(new RowStyle(SizeType.Absolute, Theme.Scale(230)));
+                _checkColumns.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+                _checkColumns.SetCellPosition(_checklistColumn, new TableLayoutPanelCellPosition(0, 0));
+                _checkColumns.SetColumnSpan(_checklistColumn, 2);
+                _checkColumns.SetCellPosition(_conditionColumn, new TableLayoutPanelCellPosition(0, 1));
+                _checkColumns.SetCellPosition(_fineColumn, new TableLayoutPanelCellPosition(1, 1));
+                _checklistColumn.Padding = Theme.ScalePadding(0, 0, 0, 12);
+            }
+            else
+            {
+                _rows.RowStyles.Add(new RowStyle(SizeType.Percent, 45F));
+                _rows.RowStyles.Add(new RowStyle(SizeType.Percent, 55F));
+                ContentArea.AutoScroll = false;
+                _rows.Dock = DockStyle.Fill;
+
+                _checkColumns.ColumnCount = 3;
+                _checkColumns.RowCount = 1;
+                _checkColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
+                _checkColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22F));
+                _checkColumns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33F));
+                _checkColumns.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+                _checkColumns.SetColumnSpan(_checklistColumn, 1);
+                _checkColumns.SetCellPosition(_checklistColumn, new TableLayoutPanelCellPosition(0, 0));
+                _checkColumns.SetCellPosition(_conditionColumn, new TableLayoutPanelCellPosition(1, 0));
+                _checkColumns.SetCellPosition(_fineColumn, new TableLayoutPanelCellPosition(2, 0));
+                _checklistColumn.Padding = Theme.ScalePadding(0, 0, 20, 0);
+            }
+
+            Theme.SetColumnsVisible(_grid, !isNarrow, "Slip", "Room");
         }
 
         private CardPanel BuildLoansCard()
         {
             CardPanel card = new CardPanel();
             card.Dock = DockStyle.Fill;
-            card.Margin = new Padding(0, 0, 0, 16);
+            card.Margin = Theme.ScalePadding(0, 0, 0, 16);
 
             Label title = Theme.MakeLabel("Items currently on loan", Theme.SectionFont, Theme.TextDark);
             title.Dock = DockStyle.Top;
-            title.Padding = new Padding(0, 0, 0, 10);
+            title.Padding = Theme.ScalePadding(0, 0, 0, 10);
 
             _grid = new DataGridView();
             Theme.StyleGrid(_grid);
@@ -90,22 +157,20 @@ namespace SchoolBorrowingSystem.UI.Pages
 
             _selectedLabel = Theme.MakeLabel("Select a loan above.", Theme.SectionFont, Theme.TextDark);
             _selectedLabel.Dock = DockStyle.Top;
-            _selectedLabel.Padding = new Padding(0, 0, 0, 10);
+            _selectedLabel.Padding = Theme.ScalePadding(0, 0, 0, 10);
 
-            // Three columns: checklist | condition | fine summary
-            TableLayoutPanel columns = new TableLayoutPanel();
-            columns.Dock = DockStyle.Fill;
-            columns.ColumnCount = 3;
-            columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
-            columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 22F));
-            columns.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33F));
-            columns.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            // Checklist, condition and fine summary. ApplyLayout decides where each one goes.
+            _checklistColumn = BuildChecklistColumn();
+            _conditionColumn = BuildConditionColumn();
+            _fineColumn = BuildFineColumn();
 
-            columns.Controls.Add(BuildChecklistColumn(), 0, 0);
-            columns.Controls.Add(BuildConditionColumn(), 1, 0);
-            columns.Controls.Add(BuildFineColumn(), 2, 0);
+            _checkColumns = new TableLayoutPanel();
+            _checkColumns.Dock = DockStyle.Fill;
+            _checkColumns.Controls.Add(_checklistColumn);
+            _checkColumns.Controls.Add(_conditionColumn);
+            _checkColumns.Controls.Add(_fineColumn);
 
-            _checkPanel.Controls.Add(columns);
+            _checkPanel.Controls.Add(_checkColumns);
             _checkPanel.Controls.Add(_selectedLabel);
             card.Controls.Add(_checkPanel);
             return card;
@@ -115,11 +180,11 @@ namespace SchoolBorrowingSystem.UI.Pages
         {
             Panel panel = new Panel();
             panel.Dock = DockStyle.Fill;
-            panel.Padding = new Padding(0, 0, 20, 0);
+            panel.Padding = Theme.ScalePadding(0, 0, 20, 0);
 
             Label label = Theme.MakeLabel("Tick every item that came back:", Theme.BoldFont, Theme.TextDark);
             label.Dock = DockStyle.Top;
-            label.Padding = new Padding(0, 0, 0, 6);
+            label.Padding = Theme.ScalePadding(0, 0, 0, 6);
 
             _checklistBox = new CheckedListBox();
             _checklistBox.Dock = DockStyle.Fill;
@@ -136,8 +201,8 @@ namespace SchoolBorrowingSystem.UI.Pages
             checkAllLink.Font = Theme.SmallFont;
             checkAllLink.LinkColor = Theme.Primary;
             checkAllLink.Dock = DockStyle.Bottom;
-            checkAllLink.Padding = new Padding(0, 6, 0, 0);
-            checkAllLink.Height = 28;
+            checkAllLink.Padding = Theme.ScalePadding(0, 6, 0, 0);
+            checkAllLink.Height = Theme.Scale(28);
             checkAllLink.LinkClicked += delegate { TickAll(); };
 
             panel.Controls.Add(_checklistBox);
@@ -146,17 +211,19 @@ namespace SchoolBorrowingSystem.UI.Pages
             return panel;
         }
 
-        private Panel BuildConditionColumn()
+        private Control BuildConditionColumn()
         {
-            Panel panel = new Panel();
+            // Top-to-bottom flow, so the pieces stack nicely at any screen scale
+            FlowLayoutPanel panel = new FlowLayoutPanel();
             panel.Dock = DockStyle.Fill;
-            panel.Padding = new Padding(0, 0, 20, 0);
+            panel.FlowDirection = FlowDirection.TopDown;
+            panel.WrapContents = false;
+            panel.Padding = Theme.ScalePadding(0, 0, 20, 0);
 
             Label label = Theme.MakeLabel("Condition:", Theme.BoldFont, Theme.TextDark);
-            label.Location = new Point(0, 0);
+            label.Margin = Theme.ScalePadding(0, 0, 0, 6);
 
             _conditionBox = Theme.MakeDropDown(160);
-            _conditionBox.Location = new Point(0, 28);
             _conditionBox.Items.Add(SchoolEquipment.ConditionGood);
             _conditionBox.Items.Add(SchoolEquipment.ConditionFair);
             _conditionBox.Items.Add(SchoolEquipment.ConditionDamaged);
@@ -165,7 +232,7 @@ namespace SchoolBorrowingSystem.UI.Pages
             _conditionBox.SelectedIndexChanged += delegate { UpdateFinePreview(); };
 
             Label help = Theme.MakeLabel("Damaged / Needs Repair sends\nthe item to repair automatically.", Theme.SmallFont, Theme.TextMuted);
-            help.Location = new Point(0, 66);
+            help.Margin = Theme.ScalePadding(0, 4, 0, 0);
 
             panel.Controls.Add(label);
             panel.Controls.Add(_conditionBox);
@@ -178,7 +245,7 @@ namespace SchoolBorrowingSystem.UI.Pages
             Panel panel = new Panel();
             panel.Dock = DockStyle.Fill;
             panel.BackColor = Theme.PageBackground;
-            panel.Padding = new Padding(16, 12, 16, 12);
+            panel.Padding = Theme.ScalePadding(16, 12, 16, 12);
 
             TableLayoutPanel lines = new TableLayoutPanel();
             lines.Dock = DockStyle.Top;
@@ -195,12 +262,12 @@ namespace SchoolBorrowingSystem.UI.Pages
 
             _holdWarningLabel = Theme.MakeLabel("", Theme.SmallFont, Theme.Danger);
             _holdWarningLabel.Dock = DockStyle.Top;
-            _holdWarningLabel.Padding = new Padding(0, 6, 0, 0);
+            _holdWarningLabel.Padding = Theme.ScalePadding(0, 6, 0, 0);
 
             _confirmButton = Theme.MakeButton("Confirm Return", Theme.Success);
             _confirmButton.Dock = DockStyle.Bottom;
             _confirmButton.AutoSize = false;
-            _confirmButton.Height = 42;
+            _confirmButton.Height = Theme.Scale(42);
             _confirmButton.Click += ConfirmButton_Click;
 
             panel.Controls.Add(_holdWarningLabel);
@@ -213,10 +280,10 @@ namespace SchoolBorrowingSystem.UI.Pages
         private Label AddFineLine(TableLayoutPanel table, string name)
         {
             Label nameLabel = Theme.MakeLabel(name, Theme.NormalFont, Theme.TextMuted);
-            nameLabel.Margin = new Padding(0, 4, 0, 4);
+            nameLabel.Margin = Theme.ScalePadding(0, 4, 0, 4);
 
             Label amountLabel = Theme.MakeLabel(Theme.FormatMoney(0), Theme.BoldFont, Theme.TextDark);
-            amountLabel.Margin = new Padding(0, 4, 0, 4);
+            amountLabel.Margin = Theme.ScalePadding(0, 4, 0, 4);
             amountLabel.Anchor = AnchorStyles.Right;
 
             table.Controls.Add(nameLabel, 0, table.RowCount);

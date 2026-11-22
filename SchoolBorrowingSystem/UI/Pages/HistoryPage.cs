@@ -30,7 +30,7 @@ namespace SchoolBorrowingSystem.UI.Pages
             _searchBox.TextChanged += delegate { RefreshData(); };
 
             _summaryLabel = Theme.MakeLabel("", Theme.BoldFont, Theme.TextMuted);
-            _summaryLabel.Margin = new Padding(8, 10, 0, 0);
+            _summaryLabel.Margin = Theme.ScalePadding(8, 10, 0, 8);
 
             toolbar.Controls.Add(_searchBox);
             toolbar.Controls.Add(_summaryLabel);
@@ -53,13 +53,22 @@ namespace SchoolBorrowingSystem.UI.Pages
 
             _emptyLabel = Theme.MakeLabel("No returns yet. Completed returns will show up here.", Theme.NormalFont, Theme.TextMuted);
             _emptyLabel.Dock = DockStyle.Top;
-            _emptyLabel.Padding = new Padding(16);
+            _emptyLabel.Padding = Theme.ScalePadding(16, 16, 16, 16);
 
             card.Controls.Add(_grid);
             card.Controls.Add(_emptyLabel);
 
             ContentArea.Controls.Add(card);
             ContentArea.Controls.Add(toolbar);
+        }
+
+        /// <summary>
+        /// Narrow window: hide the borrowed date and condition; keep who, what, when returned and the fine.
+        /// </summary>
+        protected override void ApplyLayout(bool isNarrow)
+        {
+            Theme.SetColumnsVisible(_grid, !isNarrow, "Borrowed", "Condition", "Slip");
+            _searchBox.Width = Theme.Scale(isNarrow ? 200 : 260);
         }
 
         public override void RefreshData()

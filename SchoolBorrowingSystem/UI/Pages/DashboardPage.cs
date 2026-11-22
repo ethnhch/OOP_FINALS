@@ -22,6 +22,9 @@ namespace SchoolBorrowingSystem.UI.Pages
         private Label _holdNumber;
         private Label _holdNote;
 
+        private TableLayoutPanel _cardsTable;
+        private List<CardPanel> _statCards = new List<CardPanel>();
+
         private DataGridView _loansGrid;
         private Label _noLoansLabel;
 
@@ -33,24 +36,23 @@ namespace SchoolBorrowingSystem.UI.Pages
 
         private void BuildLayout()
         {
-            // ----- Row of 4 summary cards -----
-            TableLayoutPanel cards = new TableLayoutPanel();
-            cards.Dock = DockStyle.Top;
-            cards.Height = 136;
-            cards.ColumnCount = 4;
-            for (int i = 0; i < 4; i++)
-            {
-                cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
-            }
+            // ----- 4 summary cards (placed in ApplyLayout: 4 in a row, or 2 x 2 when narrow) -----
+            _cardsTable = new TableLayoutPanel();
+            _cardsTable.Dock = DockStyle.Top;
 
-            cards.Controls.Add(MakeStatCard("TOTAL EQUIPMENT", Theme.Primary, out _totalNumber, out _totalNote), 0, 0);
-            cards.Controls.Add(MakeStatCard("AVAILABLE NOW", Theme.Success, out _availableNumber, out _availableNote), 1, 0);
-            cards.Controls.Add(MakeStatCard("ON LOAN", Theme.Warning, out _onLoanNumber, out _onLoanNote), 2, 0);
-            cards.Controls.Add(MakeStatCard("BORROWERS ON HOLD", Theme.Danger, out _holdNumber, out _holdNote), 3, 0);
+            _statCards.Add(MakeStatCard("TOTAL EQUIPMENT", Theme.Primary, out _totalNumber, out _totalNote));
+            _statCards.Add(MakeStatCard("AVAILABLE NOW", Theme.Success, out _availableNumber, out _availableNote));
+            _statCards.Add(MakeStatCard("ON LOAN", Theme.Warning, out _onLoanNumber, out _onLoanNote));
+            _statCards.Add(MakeStatCard("BORROWERS ON HOLD", Theme.Danger, out _holdNumber, out _holdNote));
+
+            foreach (CardPanel card in _statCards)
+            {
+                _cardsTable.Controls.Add(card);
+            }
 
             // ----- Quick action buttons -----
             FlowLayoutPanel actions = MakeToolbar();
-            actions.Padding = new Padding(0, 0, 0, 16);
+            actions.Padding = Theme.ScalePadding(0, 0, 0, 8);
 
             Button borrowButton = Theme.MakeButton("+  New Borrow", Theme.Primary);
             borrowButton.Click += delegate { GoToPage("Borrow"); };
@@ -69,10 +71,11 @@ namespace SchoolBorrowingSystem.UI.Pages
             CardPanel loansCard = new CardPanel();
             loansCard.Dock = DockStyle.Fill;
             loansCard.Margin = new Padding(0);
+            loansCard.Padding = Theme.ScalePadding(16, 16, 16, 16);
 
             Label loansTitle = Theme.MakeLabel("Current loans (overdue and due soonest first)", Theme.SectionFont, Theme.TextDark);
             loansTitle.Dock = DockStyle.Top;
-            loansTitle.Padding = new Padding(0, 0, 0, 10);
+            loansTitle.Padding = Theme.ScalePadding(0, 0, 0, 10);
 
             _loansGrid = new DataGridView();
             Theme.StyleGrid(_loansGrid);
@@ -85,7 +88,7 @@ namespace SchoolBorrowingSystem.UI.Pages
 
             _noLoansLabel = Theme.MakeLabel("Nothing is on loan right now. Everything is back on the shelf!", Theme.NormalFont, Theme.TextMuted);
             _noLoansLabel.Dock = DockStyle.Top;
-            _noLoansLabel.Padding = new Padding(0, 12, 0, 0);
+            _noLoansLabel.Padding = Theme.ScalePadding(0, 12, 0, 0);
 
             loansCard.Controls.Add(_loansGrid);
             loansCard.Controls.Add(_noLoansLabel);
@@ -94,7 +97,48 @@ namespace SchoolBorrowingSystem.UI.Pages
             // Fill first, then the Top items from bottom to top (see note in BasePage)
             ContentArea.Controls.Add(loansCard);
             ContentArea.Controls.Add(actions);
-            ContentArea.Controls.Add(cards);
+            ContentArea.Controls.Add(_cardsTable);
+        }
+
+        /// <summary>
+        /// Wide: 4 cards in one row. Narrow: 2 rows of 2 cards.
+        /// Also hides the less important table columns when narrow.
+        /// </summary>
+        protected override void ApplyLayout(bool isNarrow)
+        {
+            int columns = isNarrow ? 2 : 4;
+            int rows = isNarrow ? 2 : 1;
+            int cardHeight = Theme.Scale(124);
+            int gap = Theme.Scale(16);
+
+            _cardsTable.ColumnStyles.Clear();
+            _cardsTable.RowStyles.Clear();
+            _cardsTable.ColumnCount = columns;
+            _cardsTable.RowCount = rows;
+
+            for (int c = 0; c < columns; c++)
+            {
+                _cardsTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / columns));
+            }
+            for (int r = 0; r < rows; r++)
+            {
+                _cardsTable.RowStyles.Add(new RowStyle(SizeType.Absolute, cardHeight + gap));
+            }
+
+            for (int i = 0; i < _statCards.Count; i++)
+            {
+                int column = i % columns;
+                int row = i / columns;
+                _cardsTable.SetCellPosition(_statCards[i], new TableLayoutPanelCellPosition(column, row));
+
+                // A gap to the right of every card except the last one in its row
+                bool lastInRow = column == columns - 1;
+                _statCards[i].Margin = new Padding(0, 0, lastInRow ? 0 : gap, gap);
+            }
+
+            _cardsTable.Height = rows * (cardHeight + gap);
+
+            Theme.SetColumnsVisible(_loansGrid, !isNarrow, "Slip", "Room");
         }
 
         /// <summary>
@@ -105,20 +149,32 @@ namespace SchoolBorrowingSystem.UI.Pages
         {
             CardPanel card = new CardPanel();
             card.Dock = DockStyle.Fill;
-            card.Padding = new Padding(20, 16, 16, 12);
+            card.Padding = Theme.ScalePadding(18, 14, 12, 10);
+
+            // Caption, number and note stacked in a one-column table.
+            // Each row is as tall as its text, so nothing overlaps at 125% / 150% screen scaling.
+            TableLayoutPanel stack = new TableLayoutPanel();
+            stack.Dock = DockStyle.Fill;
+            stack.ColumnCount = 1;
+            stack.RowCount = 3;
+            stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             Label captionLabel = Theme.MakeLabel(caption, new Font(Theme.FontName, 9F, FontStyle.Bold), accent);
-            captionLabel.Location = new Point(20, 16);
+            captionLabel.AutoEllipsis = true;
+            captionLabel.Margin = new Padding(0);
 
             numberLabel = Theme.MakeLabel("0", Theme.BigNumberFont, Theme.TextDark);
-            numberLabel.Location = new Point(16, 36);
+            numberLabel.Margin = new Padding(0);
 
             noteLabel = Theme.MakeLabel("", Theme.SmallFont, Theme.TextMuted);
-            noteLabel.Location = new Point(20, 88);
+            noteLabel.Margin = new Padding(0);
 
-            card.Controls.Add(captionLabel);
-            card.Controls.Add(numberLabel);
-            card.Controls.Add(noteLabel);
+            stack.Controls.Add(captionLabel, 0, 0);
+            stack.Controls.Add(numberLabel, 0, 1);
+            stack.Controls.Add(noteLabel, 0, 2);
+            card.Controls.Add(stack);
             return card;
         }
 

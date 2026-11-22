@@ -74,9 +74,9 @@ namespace SchoolBorrowingSystem.UI.Dialogs
             _durationBox = new NumericUpDown();
             _durationBox.Minimum = 1;
             _durationBox.Maximum = 60;
-            _durationBox.Width = 70;
+            _durationBox.Width = Theme.Scale(70);
             _durationUnit = Theme.MakeLabel("hours", Theme.NormalFont, Theme.TextMuted);
-            _durationUnit.Margin = new System.Windows.Forms.Padding(6, 4, 0, 0);
+            _durationUnit.Margin = Theme.ScalePadding(6, 4, 0, 0);
 
             FlowLayoutPanel durationRow = new FlowLayoutPanel();
             durationRow.AutoSize = true;

@@ -29,7 +29,7 @@ namespace SchoolBorrowingSystem.UI.Pages
             runButton.Click += RunButton_Click;
 
             _resultLabel = Theme.MakeLabel("Not run yet.", Theme.SectionFont, Theme.TextMuted);
-            _resultLabel.Margin = new Padding(8, 8, 0, 0);
+            _resultLabel.Margin = Theme.ScalePadding(8, 8, 0, 0);
 
             toolbar.Controls.Add(runButton);
             toolbar.Controls.Add(_resultLabel);

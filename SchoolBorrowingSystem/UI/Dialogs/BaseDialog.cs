@@ -32,21 +32,21 @@ namespace SchoolBorrowingSystem.UI.Dialogs
             ShowInTaskbar = false;
             AutoSize = true;
             AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            Padding = new Padding(24, 20, 24, 16);
+            Padding = Theme.ScalePadding(24, 20, 24, 16);
 
             Label heading = Theme.MakeLabel(title, Theme.SectionFont, Theme.TextDark);
-            heading.Margin = new Padding(0, 0, 0, 14);
+            heading.Margin = Theme.ScalePadding(0, 0, 0, 14);
 
             // Two columns: label on the left, input on the right
             Fields = new TableLayoutPanel();
             Fields.AutoSize = true;
             Fields.ColumnCount = 2;
-            Fields.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
-            Fields.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 280F));
+            Fields.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Theme.Scale(150)));
+            Fields.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, Theme.Scale(280)));
 
             _errorLabel = Theme.MakeLabel("", Theme.SmallFont, Theme.Danger);
-            _errorLabel.MaximumSize = new Size(430, 0);
-            _errorLabel.Margin = new Padding(0, 6, 0, 6);
+            _errorLabel.MaximumSize = new Size(Theme.Scale(430), 0);
+            _errorLabel.Margin = Theme.ScalePadding(0, 6, 0, 6);
 
             _saveButton = Theme.MakeButton(saveText, Theme.Primary);
             _saveButton.Click += SaveButton_Click;
@@ -58,7 +58,7 @@ namespace SchoolBorrowingSystem.UI.Dialogs
             buttons.AutoSize = true;
             buttons.FlowDirection = FlowDirection.RightToLeft;
             buttons.Dock = DockStyle.Fill;
-            buttons.Margin = new Padding(0, 8, 0, 0);
+            buttons.Margin = Theme.ScalePadding(0, 8, 0, 0);
             cancelButton.Margin = new Padding(0);
             buttons.Controls.Add(cancelButton);
             buttons.Controls.Add(_saveButton);
@@ -82,13 +82,13 @@ namespace SchoolBorrowingSystem.UI.Dialogs
         {
             Label label = Theme.MakeLabel(labelText, Theme.NormalFont, Theme.TextDark);
             label.Anchor = AnchorStyles.Left;
-            label.Margin = new Padding(0, 6, 8, 6);
+            label.Margin = Theme.ScalePadding(0, 6, 8, 6);
 
             input.Font = Theme.NormalFont;
-            input.Margin = new Padding(0, 4, 0, 4);
+            input.Margin = Theme.ScalePadding(0, 4, 0, 4);
             if (!(input is CheckBox) && !(input is FlowLayoutPanel))
             {
-                input.Width = 280;
+                input.Width = Theme.Scale(280);
             }
 
             Fields.Controls.Add(label, 0, Fields.RowCount);

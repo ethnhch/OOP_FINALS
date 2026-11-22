@@ -14,9 +14,16 @@ namespace SchoolBorrowingSystem.UI.Pages
     ///   - a title + subtitle at the top
     ///   - a ContentArea panel where the page puts its own controls
     ///   - a way to show a message in the status bar, or jump to another page
+    ///   - responsive layout: ApplyLayout(isNarrow) is called when the page gets narrow or wide
     /// </summary>
     public class BasePage : UserControl
     {
+        // Pages narrower than this switch to their "narrow" layout (stacked, fewer columns)
+        public const int NarrowBreakpoint = 900;
+
+        private bool _layoutApplied;
+        private bool _isNarrow;
+
         protected readonly EquipmentController Equipment;
         protected readonly BorrowingController Borrowing;
         protected readonly BorrowerController Borrowers;
@@ -41,23 +48,30 @@ namespace SchoolBorrowingSystem.UI.Pages
 
             Dock = DockStyle.Fill;
             BackColor = Theme.PageBackground;
-            Padding = new Padding(28, 24, 28, 20);
+            Padding = Theme.ScalePadding(28, 24, 28, 20);
             Font = Theme.NormalFont;
             DoubleBuffered = true;
 
-            // Header: big title with a gray subtitle under it
-            Panel header = new Panel();
+            // Header: big title with a gray subtitle under it.
+            // A one-column table that sizes itself to its text, so a long subtitle
+            // wraps onto a second line on a narrow window instead of being cut off.
+            TableLayoutPanel header = new TableLayoutPanel();
             header.Dock = DockStyle.Top;
-            header.Height = 72;
+            header.AutoSize = true;
+            header.ColumnCount = 1;
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            header.Padding = Theme.ScalePadding(0, 0, 0, 16);
 
             Label titleLabel = Theme.MakeLabel(title, Theme.TitleFont, Theme.TextDark);
-            titleLabel.Location = new Point(0, 0);
+            titleLabel.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            titleLabel.Margin = new Padding(0);
 
             Label subtitleLabel = Theme.MakeLabel(subtitle, Theme.NormalFont, Theme.TextMuted);
-            subtitleLabel.Location = new Point(2, 38);
+            subtitleLabel.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            subtitleLabel.Margin = Theme.ScalePadding(2, 4, 0, 0);
 
-            header.Controls.Add(titleLabel);
-            header.Controls.Add(subtitleLabel);
+            header.Controls.Add(titleLabel, 0, 0);
+            header.Controls.Add(subtitleLabel, 0, 1);
 
             ContentArea = new Panel();
             ContentArea.Dock = DockStyle.Fill;
@@ -75,6 +89,47 @@ namespace SchoolBorrowingSystem.UI.Pages
         /// </summary>
         public virtual void RefreshData()
         {
+        }
+
+        /// <summary>True when the page is currently using its narrow layout.</summary>
+        protected bool IsNarrow
+        {
+            get { return _isNarrow; }
+        }
+
+        /// <summary>
+        /// Each page overrides this to rearrange itself:
+        ///   isNarrow = true  -> stack things vertically, hide less important columns
+        ///   isNarrow = false -> the normal side-by-side layout
+        /// It is only called when the mode actually CHANGES, not on every pixel of resizing.
+        /// </summary>
+        protected virtual void ApplyLayout(bool isNarrow)
+        {
+        }
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+
+            // Width is 0 before the page is put on the screen, so ignore that
+            if (Width == 0)
+            {
+                return;
+            }
+
+            bool narrow = Width < Theme.Scale(NarrowBreakpoint);
+            if (!_layoutApplied || narrow != _isNarrow)
+            {
+                _layoutApplied = true;
+                _isNarrow = narrow;
+
+                // Less empty space around the page when space is tight
+                Padding = narrow ? Theme.ScalePadding(16, 16, 16, 12) : Theme.ScalePadding(28, 24, 28, 20);
+
+                SuspendLayout();
+                ApplyLayout(narrow);
+                ResumeLayout(true);
+            }
         }
 
         protected void ShowStatus(string message, bool isWarning)
@@ -103,7 +158,7 @@ namespace SchoolBorrowingSystem.UI.Pages
             toolbar.AutoSize = true;
             toolbar.WrapContents = true;
             toolbar.FlowDirection = FlowDirection.LeftToRight;
-            toolbar.Padding = new Padding(0, 0, 0, 12);
+            toolbar.Padding = Theme.ScalePadding(0, 0, 0, 4);
             return toolbar;
         }
 
