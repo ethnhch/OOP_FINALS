@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using SchoolBorrowingSystem.Data;
 using SchoolBorrowingSystem.Models;
 
 namespace SchoolBorrowingSystem.Controllers
@@ -16,6 +17,7 @@ namespace SchoolBorrowingSystem.Controllers
         // UML-specified private field
         private readonly List<SchoolEquipment> _inventory;
         private readonly string _storageFilePath;
+        private readonly ISchoolDataStore _store; // optional: null = no database
 
         public EquipmentController()
             : this("equipment_inventory.txt")
@@ -23,9 +25,15 @@ namespace SchoolBorrowingSystem.Controllers
         }
 
         public EquipmentController(string storageFilePath)
+            : this(storageFilePath, null)
+        {
+        }
+
+        public EquipmentController(string storageFilePath, ISchoolDataStore store)
         {
             _inventory = new List<SchoolEquipment>();
             _storageFilePath = storageFilePath;
+            _store = store;
         }
 
         /// <summary>
@@ -52,6 +60,11 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             _inventory.Add(item);
+
+            if (_store != null)
+            {
+                _store.SaveEquipment(item);
+            }
         }
 
         /// <summary>
@@ -119,6 +132,42 @@ namespace SchoolBorrowingSystem.Controllers
 
             item.Condition = "Under Repair";
             item.IsAvailable = false;
+
+            if (_store != null)
+            {
+                _store.SaveEquipment(item);
+            }
+        }
+
+        /// <summary>
+        /// Completes a repair: the item goes back to Good condition and becomes available again.
+        /// </summary>
+        /// <param name="propertyTag">Property tag of the repaired equipment.</param>
+        public void CompleteRepair(string propertyTag)
+        {
+            SchoolEquipment item = FindEquipmentByTag(propertyTag);
+            if (item == null)
+            {
+                throw new KeyNotFoundException(string.Format("No equipment found with PropertyTag '{0}'.", propertyTag));
+            }
+
+            item.Condition = "Good";
+            item.IsAvailable = true;
+
+            if (_store != null)
+            {
+                _store.SaveEquipment(item);
+            }
+        }
+
+        /// <summary>
+        /// Replaces the in-memory inventory with items loaded from the database at startup.
+        /// Does not write anything back to the database.
+        /// </summary>
+        public void RestoreInventory(IEnumerable<SchoolEquipment> items)
+        {
+            _inventory.Clear();
+            _inventory.AddRange(items);
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SchoolBorrowingSystem.Data;
 using SchoolBorrowingSystem.Models;
 using SchoolBorrowingSystem.Transactions;
 
@@ -17,6 +18,7 @@ namespace SchoolBorrowingSystem.Controllers
         private readonly List<BorrowSlip> _historicalSlips;
         private readonly EquipmentController _equipmentController;
         private int _slipSequenceCounter;
+        private readonly ISchoolDataStore _store; // optional: null = no database
 
         public BorrowingController()
             : this(new EquipmentController())
@@ -24,6 +26,11 @@ namespace SchoolBorrowingSystem.Controllers
         }
 
         public BorrowingController(EquipmentController equipmentController)
+            : this(equipmentController, null)
+        {
+        }
+
+        public BorrowingController(EquipmentController equipmentController, ISchoolDataStore store)
         {
             if (equipmentController == null)
             {
@@ -33,6 +40,7 @@ namespace SchoolBorrowingSystem.Controllers
             _activeSlips = new List<BorrowSlip>();
             _historicalSlips = new List<BorrowSlip>();
             _equipmentController = equipmentController;
+            _store = store;
             _slipSequenceCounter = 1000;
         }
 
@@ -114,6 +122,12 @@ namespace SchoolBorrowingSystem.Controllers
             BorrowSlip slip = new BorrowSlip(slipID, borrower, item, assignedRoom, now, dueTime, "Staff Desk");
 
             _activeSlips.Add(slip);
+
+            if (_store != null)
+            {
+                _store.SaveSlip(slip);
+            }
+
             return slip;
         }
 
@@ -200,6 +214,11 @@ namespace SchoolBorrowingSystem.Controllers
             _activeSlips.Remove(slip);
             _historicalSlips.Add(slip);
 
+            if (_store != null)
+            {
+                _store.SaveSlip(slip); // slip + equipment state + borrower hold, in one transaction
+            }
+
             return totalPenalty;
         }
 
@@ -216,6 +235,11 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             borrower.HasClearanceHold = true;
+
+            if (_store != null)
+            {
+                _store.SaveBorrower(borrower);
+            }
         }
 
         /// <summary>
@@ -229,6 +253,11 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             borrower.HasClearanceHold = false;
+
+            if (_store != null)
+            {
+                _store.SaveBorrower(borrower);
+            }
         }
 
         /// <summary>
@@ -245,6 +274,38 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Rebuilds the slip lists from the database at startup. A slip without a return time
+        /// is active; otherwise it is history. Also continues the SLIP-#### numbering.
+        /// Does not write anything back to the database.
+        /// </summary>
+        public void RestoreSlips(IEnumerable<BorrowSlip> slips)
+        {
+            _activeSlips.Clear();
+            _historicalSlips.Clear();
+
+            foreach (BorrowSlip slip in slips)
+            {
+                if (slip.TimeReturned.HasValue)
+                {
+                    _historicalSlips.Add(slip);
+                }
+                else
+                {
+                    _activeSlips.Add(slip);
+                }
+
+                int number;
+                if (slip.SlipID != null &&
+                    slip.SlipID.StartsWith("SLIP-", StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(slip.SlipID.Substring(5), out number) &&
+                    number > _slipSequenceCounter)
+                {
+                    _slipSequenceCounter = number;
+                }
+            }
         }
     }
 }
