@@ -1,24 +1,62 @@
 # School Equipment Borrowing System
 
-A robust, object-oriented School Equipment Borrowing Management System implemented in C# for Visual Studio.
-
-## Architecture & Design Patterns
-- **Language**: C# (.NET / Visual Studio compatible)
-- **Object-Oriented Core**: Full adherence to Abstraction, Encapsulation, Inheritance, Polymorphism, and SOLID principles.
-- **Visual Studio Ready**: Includes solution (`.sln`) and project (`.csproj`) files ready to open and run in Visual Studio 2022/2019.
-
-## UML Class Structure
-- `SchoolBorrower`: Borrower entity managing credentials, role, department, and clearance holds.
-- `SchoolEquipment` (Abstract): Base abstraction for borrowable equipment with encapsulated fields and abstract checklists/durations.
-- `AVEquipment`: Subclass for audiovisual equipment (projectors, remotes, cables) with hourly borrow duration and checklist logic.
-- `LabEquipment`: Subclass for laboratory equipment (microscopes, kits) with calibration dates, component counts, and multi-day duration.
-- `BorrowSlip`: Transaction record coordinating loan duration, due times, overdue tracking, and assigned parties.
-- `EquipmentController`: Manages school inventory, availability filtering, repair workflows, and persistence.
-- `BorrowingController`: Central coordinator processing borrowing transactions, return evaluations, fine calculations, and clearance hold enforcement.
+A Windows Forms app (C# / .NET 8) for a school equipment office: lend projectors and lab equipment,
+check them back in, charge fines, and manage clearance holds.
 
 ## Getting Started in Visual Studio
-1. Open `SchoolBorrowingSystem.sln` in Visual Studio.
-2. Build the solution using `Ctrl + Shift + B`.
-3. Press `F5` to run:
-   - System validates all 44 test assertions.
-   - Pressing any key opens the Interactive Dashboard (borrow, return, view inventory, repair equipment, apply/lift clearance holds, save inventory).
+1. Open `SchoolBorrowingSystem.sln` in Visual Studio 2022.
+2. Build with `Ctrl + Shift + B`.
+3. Press `F5` to run. The app opens on the **Dashboard** with some sample data.
+
+To run the automated tests, open the **Tests** page in the app and click *Run All Tests*.
+
+## Using the App
+The sidebar on the left switches between pages (shortcut: `Ctrl+1` to `Ctrl+7`, `F5` refreshes).
+
+| Page | What you can do |
+| --- | --- |
+| **Dashboard** | See totals at a glance (equipment, available, on loan, overdue, borrowers on hold) and the loans that need attention. |
+| **Inventory** | Search and filter all equipment, add new items, send items to repair, mark them fixed, save/load the inventory file. |
+| **Borrow** | Pick a borrower and an available item. The form warns you about clearance holds *before* you click, shows the due time, and prints a borrow slip. |
+| **Return** | Select a loan, tick each checklist item that came back, choose the condition, and see the fine **before** confirming. |
+| **Borrowers** | Search borrowers, register new ones, place or lift clearance holds. |
+| **History** | Every completed return with its condition and fine. |
+| **Tests** | Runs all 57 automated tests and shows the results. |
+
+## Business Rules
+| Rule | AV Equipment | Lab Equipment |
+| --- | --- | --- |
+| Loan period | Hours (default 4) | Days (default 7) |
+| Late fine | PHP 50 first hour + PHP 25 per extra hour | PHP 100 first day + PHP 50 per extra day |
+| Missing parts | PHP 150, item stays unavailable ("Missing Parts") | same |
+| Damaged / Needs Repair | PHP 300, item goes to "Under Repair" | same |
+
+Any fine automatically puts the borrower on **clearance hold**, which blocks new loans until staff lift it.
+
+## Project Structure
+```
+SchoolBorrowingSystem/
+├── Models/              SchoolEquipment (abstract), AVEquipment, LabEquipment, SchoolBorrower
+├── Transactions/        BorrowSlip
+├── Controllers/         EquipmentController, BorrowingController, BorrowerController
+├── UI/
+│   ├── MainForm.cs      Window with the sidebar and status bar
+│   ├── Theme.cs         All colors, fonts and styled-control helpers
+│   ├── AudioHelper.cs   Small sound effects (played in the background)
+│   ├── Pages/           One class per sidebar page (all inherit BasePage)
+│   └── Dialogs/         Add Equipment / Add Borrower pop-ups (inherit BaseDialog)
+├── Program.cs           Starts the app and adds sample data
+└── TestRunner.cs        Automated tests
+```
+
+## OOP Concepts Used
+- **Abstraction** – `SchoolEquipment` is abstract and defines what every item must be able to do.
+- **Encapsulation** – private fields with public properties; controllers return *copies* of their lists.
+- **Inheritance** – `AVEquipment` / `LabEquipment` extend `SchoolEquipment`; every page extends `BasePage`; dialogs extend `BaseDialog`.
+- **Polymorphism** – each equipment type calculates its own due time (`CalculateDueTime`), late fine
+  (`CalculateLateFine`) and return checklist (`GetReturnChecklist`), so `BorrowingController` never needs
+  to check `if (item is AVEquipment)`.
+
+## Notes
+- The UI is built in code (no `.Designer.cs` files), so the forms open as code in Visual Studio rather than in the drag-and-drop designer.
+- Borrowers and loans are kept in memory while the app runs. Only the inventory is saved to `school_inventory.txt` (Inventory page → *Save to File*).

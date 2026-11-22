@@ -5,7 +5,7 @@
 **System Name:** School Equipment Borrowing Management System  
 **Evaluation Standard:** Object-Oriented Programming (OOP) Principles & UML Diagram Fidelity  
 **Date of Audit:** November 21, 2026  
-**Status:** **APPROVED & FULLY COMPLIANT** (44/44 Tests Passed - 100% Pass Rate)
+**Status:** **APPROVED & FULLY COMPLIANT** (57/57 Tests Passed - 100% Pass Rate)
 
 ---
 
@@ -207,8 +207,27 @@ The system faithfully implements every class, attribute, method, and association
 [PASS] Polymorphic AVEquipment restored correctly
 [PASS] Polymorphic LabEquipment restored correctly
 
+--> Scenario 12: Exact Fine Amounts & Live Fine Preview
+[PASS] AV: no late fine when returned on time
+[PASS] AV: 10 minutes late counts as 1 hour (PHP 50)
+[PASS] AV: 3 hours late = 50 + 25 + 25 (PHP 100)
+[PASS] Lab: 2 days late = 100 + 50 (PHP 150)
+[PASS] Due time comes from AVEquipment.CalculateDueTime (2 hours)
+[PASS] Preview adds late + missing parts + damage fees (PHP 500)
+[PASS] Preview does not change any data
+
+--> Scenario 13: Restoring Equipment After Repair / Missing Parts
+[PASS] Incomplete return marks item as 'Missing Parts'
+[PASS] Slip remembers the fine that was charged
+[PASS] RestoreToService puts item back as Good / Available
+
+--> Scenario 14: BorrowerController Registration Rules
+[PASS] Duplicate school ID is rejected
+[PASS] Borrower without a name is rejected
+[PASS] Borrower can be found by school ID
+
 ================================================================
- TEST RESULTS SUMMARY: 44 PASSED | 0 FAILED | TOTAL: 44
+ TEST RESULTS SUMMARY: 57 PASSED | 0 FAILED | TOTAL: 57
 ================================================================
 ```
 

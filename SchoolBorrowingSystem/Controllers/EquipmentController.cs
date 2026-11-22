@@ -7,13 +7,11 @@ using SchoolBorrowingSystem.Models;
 namespace SchoolBorrowingSystem.Controllers
 {
     /// <summary>
-    /// Controller managing school equipment inventory, availability queries,
-    /// maintenance lifecycle, and disk persistence.
-    /// Demonstrates encapsulation of the inventory list and Single Responsibility Principle (SRP).
+    /// Keeps the list of all school equipment.
+    /// Handles adding items, repairs, and saving/loading the inventory file.
     /// </summary>
     public class EquipmentController
     {
-        // UML-specified private field
         private readonly List<SchoolEquipment> _inventory;
         private readonly string _storageFilePath;
 
@@ -28,10 +26,15 @@ namespace SchoolBorrowingSystem.Controllers
             _storageFilePath = storageFilePath;
         }
 
-        /// <summary>
-        /// Adds a new equipment item to the school inventory.
-        /// </summary>
-        /// <param name="item">Equipment instance to register.</param>
+        public string StorageFilePath
+        {
+            get { return _storageFilePath; }
+        }
+
+        // ---------------------------------------------------------------
+        // Adding and finding equipment
+        // ---------------------------------------------------------------
+
         public void AddEquipment(SchoolEquipment item)
         {
             if (item == null)
@@ -39,14 +42,23 @@ namespace SchoolBorrowingSystem.Controllers
                 throw new ArgumentNullException("item", "Equipment item cannot be null.");
             }
 
-            if (string.IsNullOrEmpty(item.PropertyTag))
+            if (string.IsNullOrWhiteSpace(item.PropertyTag))
             {
-                throw new ArgumentException("Equipment PropertyTag cannot be empty.", "item");
+                throw new ArgumentException("Property tag cannot be empty.", "item");
             }
 
-            // Ensure uniqueness of PropertyTag
-            SchoolEquipment existing = FindEquipmentByTag(item.PropertyTag);
-            if (existing != null)
+            if (string.IsNullOrWhiteSpace(item.ItemName))
+            {
+                throw new ArgumentException("Equipment name cannot be empty.", "item");
+            }
+
+            // The save file uses | to separate columns, so it can't be inside the text
+            if (item.PropertyTag.Contains("|") || item.ItemName.Contains("|"))
+            {
+                throw new ArgumentException("Property tag and name cannot contain the '|' character.", "item");
+            }
+
+            if (FindEquipmentByTag(item.PropertyTag) != null)
             {
                 throw new InvalidOperationException(string.Format("Equipment with PropertyTag '{0}' is already registered.", item.PropertyTag));
             }
@@ -54,16 +66,16 @@ namespace SchoolBorrowingSystem.Controllers
             _inventory.Add(item);
         }
 
-        /// <summary>
-        /// Retrieves all equipment currently marked as available for borrowing.
-        /// </summary>
-        /// <returns>List of available equipment items.</returns>
+        public List<SchoolEquipment> GetAllEquipment()
+        {
+            return new List<SchoolEquipment>(_inventory);
+        }
+
         public List<SchoolEquipment> GetAvailableEquipment()
         {
             List<SchoolEquipment> available = new List<SchoolEquipment>();
-            for (int i = 0; i < _inventory.Count; i++)
+            foreach (SchoolEquipment item in _inventory)
             {
-                SchoolEquipment item = _inventory[i];
                 if (item.IsAvailable)
                 {
                     available.Add(item);
@@ -72,19 +84,6 @@ namespace SchoolBorrowingSystem.Controllers
             return available;
         }
 
-        /// <summary>
-        /// Retrieves a copy of the entire equipment inventory.
-        /// </summary>
-        public List<SchoolEquipment> GetAllEquipment()
-        {
-            return new List<SchoolEquipment>(_inventory);
-        }
-
-        /// <summary>
-        /// Locates an equipment item by its unique property tag.
-        /// </summary>
-        /// <param name="propertyTag">The unique property identifier.</param>
-        /// <returns>Matching SchoolEquipment if found; otherwise null.</returns>
         public SchoolEquipment FindEquipmentByTag(string propertyTag)
         {
             if (string.IsNullOrEmpty(propertyTag))
@@ -92,23 +91,20 @@ namespace SchoolBorrowingSystem.Controllers
                 return null;
             }
 
-            for (int i = 0; i < _inventory.Count; i++)
+            foreach (SchoolEquipment item in _inventory)
             {
-                SchoolEquipment item = _inventory[i];
                 if (string.Equals(item.PropertyTag, propertyTag, StringComparison.OrdinalIgnoreCase))
                 {
                     return item;
                 }
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Marks an equipment item as requiring maintenance or repair,
-        /// automatically revoking its availability for future loans.
-        /// </summary>
-        /// <param name="propertyTag">Property tag of the equipment needing repair.</param>
+        // ---------------------------------------------------------------
+        // Repairs
+        // ---------------------------------------------------------------
+
         public void MarkForRepair(string propertyTag)
         {
             SchoolEquipment item = FindEquipmentByTag(propertyTag);
@@ -117,14 +113,31 @@ namespace SchoolBorrowingSystem.Controllers
                 throw new KeyNotFoundException(string.Format("No equipment found with PropertyTag '{0}'.", propertyTag));
             }
 
-            item.Condition = "Under Repair";
+            item.Condition = SchoolEquipment.ConditionUnderRepair;
             item.IsAvailable = false;
         }
 
         /// <summary>
-        /// Persists the current inventory snapshot to storage.
-        /// Demonstrates structured, reliable file I/O.
+        /// Puts an item back into circulation after a repair (or after missing parts are found).
         /// </summary>
+        public void RestoreToService(string propertyTag)
+        {
+            SchoolEquipment item = FindEquipmentByTag(propertyTag);
+            if (item == null)
+            {
+                throw new KeyNotFoundException(string.Format("No equipment found with PropertyTag '{0}'.", propertyTag));
+            }
+
+            item.Condition = SchoolEquipment.ConditionGood;
+            item.IsAvailable = true;
+        }
+
+        // ---------------------------------------------------------------
+        // Saving and loading
+        // File format (one item per line):
+        //   PropertyTag|Type|ItemName|Condition|IsAvailable|Key=Value;Key=Value
+        // ---------------------------------------------------------------
+
         public void SaveInventory()
         {
             try
@@ -132,10 +145,8 @@ namespace SchoolBorrowingSystem.Controllers
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("# PropertyTag|Type|ItemName|Condition|IsAvailable|ExtraData");
 
-                for (int i = 0; i < _inventory.Count; i++)
+                foreach (SchoolEquipment item in _inventory)
                 {
-                    SchoolEquipment item = _inventory[i];
-                    string typeName = item.GetType().Name;
                     string extraData = string.Empty;
 
                     if (item is AVEquipment)
@@ -152,7 +163,7 @@ namespace SchoolBorrowingSystem.Controllers
                     }
 
                     sb.AppendLine(string.Format("{0}|{1}|{2}|{3}|{4}|{5}",
-                        item.PropertyTag, typeName, item.ItemName, item.Condition, item.IsAvailable, extraData));
+                        item.PropertyTag, item.GetType().Name, item.ItemName, item.Condition, item.IsAvailable, extraData));
                 }
 
                 File.WriteAllText(_storageFilePath, sb.ToString());
@@ -163,9 +174,6 @@ namespace SchoolBorrowingSystem.Controllers
             }
         }
 
-        /// <summary>
-        /// Loads inventory from the storage file if it exists.
-        /// </summary>
         public void LoadInventory()
         {
             if (!File.Exists(_storageFilePath))
@@ -178,10 +186,12 @@ namespace SchoolBorrowingSystem.Controllers
                 string[] lines = File.ReadAllLines(_storageFilePath);
                 _inventory.Clear();
 
-                for (int i = 0; i < lines.Length; i++)
+                foreach (string rawLine in lines)
                 {
-                    string line = lines[i].Trim();
-                    if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
+                    string line = rawLine.Trim();
+
+                    // Skip empty lines and the header comment
+                    if (line.Length == 0 || line.StartsWith("#"))
                     {
                         continue;
                     }
@@ -196,51 +206,35 @@ namespace SchoolBorrowingSystem.Controllers
                     string type = parts[1];
                     string name = parts[2];
                     string condition = parts[3];
-                    bool isAvailable = false;
+                    bool isAvailable;
                     bool.TryParse(parts[4], out isAvailable);
-                    string extra = parts.Length > 5 ? parts[5] : string.Empty;
+
+                    Dictionary<string, string> extras = new Dictionary<string, string>();
+                    if (parts.Length > 5)
+                    {
+                        extras = ReadExtraValues(parts[5]);
+                    }
 
                     if (type == "AVEquipment")
                     {
-                        bool remote = false, cord = true, hdmi = true;
-                        int hours = 4;
+                        bool remote = ReadBool(extras, "Remote", false);
+                        bool cord = ReadBool(extras, "Cord", true);
+                        bool hdmi = ReadBool(extras, "HDMI", true);
+                        int hours = ReadInt(extras, "Hours", AVEquipment.DefaultHours);
 
-                        string[] extras = extra.Split(';');
-                        for (int e = 0; e < extras.Length; e++)
-                        {
-                            string[] kv = extras[e].Split('=');
-                            if (kv.Length == 2)
-                            {
-                                if (kv[0] == "Remote") bool.TryParse(kv[1], out remote);
-                                else if (kv[0] == "Cord") bool.TryParse(kv[1], out cord);
-                                else if (kv[0] == "HDMI") bool.TryParse(kv[1], out hdmi);
-                                else if (kv[0] == "Hours") int.TryParse(kv[1], out hours);
-                            }
-                        }
-
-                        AVEquipment av = new AVEquipment(tag, name, remote, cord, hdmi, hours, condition, isAvailable);
-                        _inventory.Add(av);
+                        _inventory.Add(new AVEquipment(tag, name, remote, cord, hdmi, hours, condition, isAvailable));
                     }
                     else if (type == "LabEquipment")
                     {
-                        DateTime calDate = DateTime.Now;
-                        int compCount = 1;
-                        int days = 7;
-
-                        string[] extras = extra.Split(';');
-                        for (int e = 0; e < extras.Length; e++)
+                        DateTime calibration = DateTime.Now;
+                        if (extras.ContainsKey("Calibration"))
                         {
-                            string[] kv = extras[e].Split('=');
-                            if (kv.Length == 2)
-                            {
-                                if (kv[0] == "Calibration") DateTime.TryParse(kv[1], out calDate);
-                                else if (kv[0] == "Components") int.TryParse(kv[1], out compCount);
-                                else if (kv[0] == "Days") int.TryParse(kv[1], out days);
-                            }
+                            DateTime.TryParse(extras["Calibration"], out calibration);
                         }
+                        int components = ReadInt(extras, "Components", 1);
+                        int days = ReadInt(extras, "Days", LabEquipment.DefaultDays);
 
-                        LabEquipment lab = new LabEquipment(tag, name, calDate, compCount, days, condition, isAvailable);
-                        _inventory.Add(lab);
+                        _inventory.Add(new LabEquipment(tag, name, calibration, components, days, condition, isAvailable));
                     }
                 }
             }
@@ -248,6 +242,43 @@ namespace SchoolBorrowingSystem.Controllers
             {
                 throw new IOException(string.Format("Failed to load inventory from '{0}': {1}", _storageFilePath, ex.Message), ex);
             }
+        }
+
+        // Turns "Remote=True;Hours=4" into a dictionary { Remote: True, Hours: 4 }
+        private static Dictionary<string, string> ReadExtraValues(string text)
+        {
+            Dictionary<string, string> values = new Dictionary<string, string>();
+            string[] pairs = text.Split(';');
+
+            foreach (string pair in pairs)
+            {
+                string[] keyAndValue = pair.Split('=');
+                if (keyAndValue.Length == 2)
+                {
+                    values[keyAndValue[0]] = keyAndValue[1];
+                }
+            }
+            return values;
+        }
+
+        private static bool ReadBool(Dictionary<string, string> values, string key, bool defaultValue)
+        {
+            bool result;
+            if (values.ContainsKey(key) && bool.TryParse(values[key], out result))
+            {
+                return result;
+            }
+            return defaultValue;
+        }
+
+        private static int ReadInt(Dictionary<string, string> values, string key, int defaultValue)
+        {
+            int result;
+            if (values.ContainsKey(key) && int.TryParse(values[key], out result))
+            {
+                return result;
+            }
+            return defaultValue;
         }
     }
 }

@@ -4,11 +4,16 @@ using System.Collections.Generic;
 namespace SchoolBorrowingSystem.Models
 {
     /// <summary>
-    /// Represents scientific or technical laboratory equipment (e.g., compound microscopes, digital oscilloscopes).
-    /// Typically loaned for multiple days and requires rigorous calibration verification and component tracking.
+    /// Laboratory equipment such as microscopes and oscilloscopes.
+    /// These are borrowed for several DAYS and have parts that must all come back.
     /// </summary>
     public class LabEquipment : SchoolEquipment
     {
+        // Fine rules for lab items (in PHP)
+        public const double FirstLateDayFine = 100.00;
+        public const double ExtraLateDayFine = 50.00;
+        public const int DefaultDays = 7;
+
         public DateTime CalibrationDate { get; set; }
         public int ComponentCount { get; set; }
         public int BorrowDurationDays { get; set; }
@@ -18,30 +23,59 @@ namespace SchoolBorrowingSystem.Models
         {
             CalibrationDate = DateTime.Now;
             ComponentCount = 1;
-            BorrowDurationDays = 7; // Default loan window: 7 days
+            BorrowDurationDays = DefaultDays;
         }
 
-        public LabEquipment(string propertyTag, string itemName, DateTime calibrationDate, int componentCount, int durationDays = 7, string condition = "Good", bool isAvailable = true)
+        public LabEquipment(string propertyTag, string itemName, DateTime calibrationDate, int componentCount, int durationDays = DefaultDays, string condition = ConditionGood, bool isAvailable = true)
             : base(propertyTag, itemName, condition, isAvailable)
         {
             CalibrationDate = calibrationDate;
-            ComponentCount = componentCount > 0 ? componentCount : 1;
-            BorrowDurationDays = durationDays > 0 ? durationDays : 7;
+
+            // Every item has at least 1 part (the item itself)
+            if (componentCount > 0)
+            {
+                ComponentCount = componentCount;
+            }
+            else
+            {
+                ComponentCount = 1;
+            }
+
+            if (durationDays > 0)
+            {
+                BorrowDurationDays = durationDays;
+            }
+            else
+            {
+                BorrowDurationDays = DefaultDays;
+            }
         }
 
-        /// <summary>
-        /// Fulfills base contract: returns multi-day loan allowance for lab equipment.
-        /// </summary>
         public override int GetBorrowDurationDays()
         {
             return BorrowDurationDays;
         }
 
+        public override DateTime CalculateDueTime(DateTime timeBorrowed)
+        {
+            return timeBorrowed.AddDays(BorrowDurationDays);
+        }
+
         /// <summary>
-        /// Generates a laboratory-grade inspection checklist, verifying calibration validity,
-        /// all modular components, and biological/chemical contamination safety.
-        /// Demonstrates runtime polymorphism.
+        /// PHP 100 for the first late day, then PHP 50 for every day after that.
+        /// A part of a day counts as a full day.
         /// </summary>
+        public override double CalculateLateFine(TimeSpan lateBy)
+        {
+            if (lateBy.TotalMinutes <= 0)
+            {
+                return 0;
+            }
+
+            double lateDays = Math.Ceiling(lateBy.TotalDays);
+            return FirstLateDayFine + ((lateDays - 1) * ExtraLateDayFine);
+        }
+
         public override List<string> GetReturnChecklist()
         {
             List<string> checklist = new List<string>();
@@ -50,6 +84,25 @@ namespace SchoolBorrowingSystem.Models
             checklist.Add(string.Format("Calibration Seal Valid (Calibration Date: {0})", CalibrationDate.ToString("yyyy-MM-dd")));
             checklist.Add("Biological / Chemical Residue Inspection and Decontamination Check");
             return checklist;
+        }
+
+        public override string GetCategoryName()
+        {
+            return "Lab Equipment";
+        }
+
+        public override string GetLoanPeriodText()
+        {
+            if (BorrowDurationDays == 1)
+            {
+                return "1 day";
+            }
+            return BorrowDurationDays + " days";
+        }
+
+        public override string GetDetailsText()
+        {
+            return string.Format("{0} part(s), calibrated {1:MMM d, yyyy}", ComponentCount, CalibrationDate);
         }
 
         public override string ToString()

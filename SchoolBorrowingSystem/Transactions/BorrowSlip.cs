@@ -4,8 +4,8 @@ using SchoolBorrowingSystem.Models;
 namespace SchoolBorrowingSystem.Transactions
 {
     /// <summary>
-    /// Represents an active or historical borrowing transaction slip.
-    /// Tracks loan duration, room location, staff release credentials, and overdue state.
+    /// One borrowing record: who borrowed what, where it is used, and when it is due.
+    /// After the item is returned, the slip also remembers the condition and the fine.
     /// </summary>
     public class BorrowSlip
     {
@@ -18,6 +18,11 @@ namespace SchoolBorrowingSystem.Transactions
         public DateTime? TimeReturned { get; set; }
         public string ReleasedByStaff { get; set; }
 
+        // Filled in when the item is returned
+        public string ReturnCondition { get; set; }
+        public bool ChecklistComplete { get; set; }
+        public double PenaltyCharged { get; set; }
+
         public BorrowSlip()
         {
             SlipID = string.Empty;
@@ -28,9 +33,13 @@ namespace SchoolBorrowingSystem.Transactions
             DueTime = DateTime.Now;
             TimeReturned = null;
             ReleasedByStaff = "Admin";
+            ReturnCondition = string.Empty;
+            ChecklistComplete = false;
+            PenaltyCharged = 0;
         }
 
         public BorrowSlip(string slipID, SchoolBorrower borrower, SchoolEquipment equipment, string roomToBeUsed, DateTime timeBorrowed, DateTime dueTime, string releasedByStaff)
+            : this()
         {
             SlipID = slipID;
             Borrower = borrower;
@@ -38,16 +47,18 @@ namespace SchoolBorrowingSystem.Transactions
             RoomToBeUsed = roomToBeUsed;
             TimeBorrowed = timeBorrowed;
             DueTime = dueTime;
-            TimeReturned = null;
             ReleasedByStaff = releasedByStaff;
         }
 
+        public bool IsReturned()
+        {
+            return TimeReturned.HasValue;
+        }
+
         /// <summary>
-        /// Evaluates whether the loan is overdue.
-        /// If already returned, checks if return timestamp exceeded due time.
-        /// If currently outstanding, checks if current time exceeds due time.
+        /// Returned slips: was it returned after the due time?
+        /// Open slips: is it already past the due time right now?
         /// </summary>
-        /// <returns>True if returned late or currently past due; false otherwise.</returns>
         public bool IsOverdue()
         {
             if (TimeReturned.HasValue)
@@ -58,13 +69,59 @@ namespace SchoolBorrowingSystem.Transactions
             return DateTime.Now > DueTime;
         }
 
+        /// <summary>
+        /// Text for the status column, e.g. "Due in 2h 15m" or "Overdue by 1d 3h".
+        /// </summary>
+        public string GetTimeLeftText()
+        {
+            if (TimeReturned.HasValue)
+            {
+                return "Returned";
+            }
+
+            TimeSpan difference = DueTime - DateTime.Now;
+            if (difference.TotalSeconds >= 0)
+            {
+                return "Due in " + FormatTimeSpan(difference);
+            }
+
+            return "Overdue by " + FormatTimeSpan(difference.Negate());
+        }
+
+        /// <summary>
+        /// Turns a time span into short text like "3d 4h", "2h 5m" or "12m".
+        /// </summary>
+        public static string FormatTimeSpan(TimeSpan span)
+        {
+            if (span.TotalDays >= 1)
+            {
+                return string.Format("{0}d {1}h", (int)span.TotalDays, span.Hours);
+            }
+            if (span.TotalHours >= 1)
+            {
+                return string.Format("{0}h {1}m", (int)span.TotalHours, span.Minutes);
+            }
+            return string.Format("{0}m", Math.Max(1, (int)span.TotalMinutes));
+        }
+
         public override string ToString()
         {
             string borrowerName = Borrower != null ? Borrower.FullName : "Unknown Borrower";
             string itemName = Equipment != null ? Equipment.ItemName : "Unknown Equipment";
-            string status = TimeReturned.HasValue
-                ? string.Format("RETURNED ({0:yyyy-MM-dd HH:mm})", TimeReturned.Value)
-                : (IsOverdue() ? "OVERDUE" : "ACTIVE");
+
+            string status;
+            if (TimeReturned.HasValue)
+            {
+                status = string.Format("RETURNED ({0:yyyy-MM-dd HH:mm})", TimeReturned.Value);
+            }
+            else if (IsOverdue())
+            {
+                status = "OVERDUE";
+            }
+            else
+            {
+                status = "ACTIVE";
+            }
 
             return string.Format("[Slip #{0}] {1} borrowed by {2} | Room: {3} | Due: {4:yyyy-MM-dd HH:mm} | Status: {5}",
                 SlipID, itemName, borrowerName, RoomToBeUsed, DueTime, status);

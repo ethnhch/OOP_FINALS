@@ -16,6 +16,10 @@ namespace SchoolBorrowingSystem
         private static int _passedTests = 0;
         private static int _failedTests = 0;
 
+        // So the Tests page can show the numbers without parsing text
+        public static int PassedCount { get { return _passedTests; } }
+        public static int FailedCount { get { return _failedTests; } }
+
         public static bool RunAllTests()
         {
             _passedTests = 0;
@@ -37,6 +41,9 @@ namespace SchoolBorrowingSystem
             TestIncompleteChecklistPenalty();
             TestDamagedReturnAndAutomaticRepairWorkflow();
             TestInventoryPersistence();
+            TestExactFineAmountsAndPreview();
+            TestRestoreAfterRepairOrMissingParts();
+            TestBorrowerRegistry();
 
             Console.WriteLine();
             Console.WriteLine("================================================================");
@@ -327,6 +334,84 @@ namespace SchoolBorrowingSystem
 
             // Clean up test file
             if (System.IO.File.Exists(testFile)) System.IO.File.Delete(testFile);
+        }
+            private static void TestExactFineAmountsAndPreview()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 12: Exact Fine Amounts & Live Fine Preview");
+
+            AVEquipment av = new AVEquipment("AV-950", "Wireless Mic", false, true, false, 2);
+            LabEquipment lab = new LabEquipment("LAB-950", "pH Meter", DateTime.Now, 2, 3);
+
+            Assert(av.CalculateLateFine(TimeSpan.Zero) == 0, "AV: no late fine when returned on time");
+            Assert(av.CalculateLateFine(TimeSpan.FromMinutes(10)) == 50, "AV: 10 minutes late counts as 1 hour (PHP 50)");
+            Assert(av.CalculateLateFine(TimeSpan.FromHours(3)) == 100, "AV: 3 hours late = 50 + 25 + 25 (PHP 100)");
+            Assert(lab.CalculateLateFine(TimeSpan.FromDays(2)) == 150, "Lab: 2 days late = 100 + 50 (PHP 150)");
+
+            EquipmentController eqCtrl = new EquipmentController();
+            eqCtrl.AddEquipment(av);
+            BorrowingController borrowCtrl = new BorrowingController(eqCtrl);
+            SchoolBorrower student = new SchoolBorrower("STU-9500", "Barbara Liskov", "Student", "Computer Science");
+            BorrowSlip slip = borrowCtrl.ProcessBorrow(student, av, "Room 101");
+
+            Assert(slip.DueTime == slip.TimeBorrowed.AddHours(2), "Due time comes from AVEquipment.CalculateDueTime (2 hours)");
+
+            double preview = borrowCtrl.CalculatePenalty(slip, "Damaged", false, slip.DueTime.AddMinutes(30));
+            Assert(preview == 50 + 150 + 300, "Preview adds late + missing parts + damage fees (PHP 500)");
+            Assert(av.IsAvailable == false && student.HasClearanceHold == false, "Preview does not change any data");
+        }
+
+        private static void TestRestoreAfterRepairOrMissingParts()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 13: Restoring Equipment After Repair / Missing Parts");
+
+            EquipmentController eqCtrl = new EquipmentController();
+            AVEquipment av = new AVEquipment("AV-960", "Speaker Set", false, true, false, 4);
+            eqCtrl.AddEquipment(av);
+            BorrowingController borrowCtrl = new BorrowingController(eqCtrl);
+            SchoolBorrower student = new SchoolBorrower("STU-9600", "Ken Thompson", "Student", "IT");
+
+            BorrowSlip slip = borrowCtrl.ProcessBorrow(student, av, "Gym");
+            borrowCtrl.ProcessReturn(slip.SlipID, "Good", false);
+            Assert(av.Condition == "Missing Parts", "Incomplete return marks item as 'Missing Parts'");
+            Assert(borrowCtrl.GetHistoricalSlips()[0].PenaltyCharged == 150, "Slip remembers the fine that was charged");
+
+            eqCtrl.RestoreToService("AV-960");
+            Assert(av.IsAvailable == true && av.Condition == "Good", "RestoreToService puts item back as Good / Available");
+        }
+
+        private static void TestBorrowerRegistry()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 14: BorrowerController Registration Rules");
+
+            BorrowerController borrowers = new BorrowerController();
+            borrowers.AddBorrower(new SchoolBorrower("2025-0001", "Linus Torvalds", "Student", "IT"));
+
+            bool duplicateCaught = false;
+            try
+            {
+                borrowers.AddBorrower(new SchoolBorrower("2025-0001", "Someone Else", "Student", "IT"));
+            }
+            catch (InvalidOperationException)
+            {
+                duplicateCaught = true;
+            }
+
+            bool emptyNameCaught = false;
+            try
+            {
+                borrowers.AddBorrower(new SchoolBorrower("2025-0002", "  ", "Student", "IT"));
+            }
+            catch (ArgumentException)
+            {
+                emptyNameCaught = true;
+            }
+
+            Assert(duplicateCaught, "Duplicate school ID is rejected");
+            Assert(emptyNameCaught, "Borrower without a name is rejected");
+            Assert(borrowers.FindBorrowerById("2025-0001") != null, "Borrower can be found by school ID");
         }
     }
 }

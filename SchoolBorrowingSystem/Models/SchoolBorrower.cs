@@ -3,8 +3,7 @@ using System;
 namespace SchoolBorrowingSystem.Models
 {
     /// <summary>
-    /// Represents a school borrower (student, faculty, or staff member).
-    /// Encapsulates identification credentials and clearance hold eligibility.
+    /// A person who can borrow equipment (student, faculty or staff).
     /// </summary>
     public class SchoolBorrower
     {
@@ -13,6 +12,14 @@ namespace SchoolBorrowingSystem.Models
         public string Role { get; set; }
         public string Department { get; set; }
         public bool HasClearanceHold { get; set; }
+
+        /// <summary>
+        /// Short text used in drop-down lists, for example "2024-10001 - Emma Watson (Student)".
+        /// </summary>
+        public string DisplayName
+        {
+            get { return SchoolIDNumber + " - " + FullName + " (" + Role + ")"; }
+        }
 
         public SchoolBorrower()
         {
@@ -33,13 +40,11 @@ namespace SchoolBorrowingSystem.Models
         }
 
         /// <summary>
-        /// Validates borrower eligibility for acquiring school equipment loans.
-        /// An individual is ineligible if a clearance hold is active or their ID is invalid.
+        /// A borrower can only borrow if they have a school ID and no clearance hold.
         /// </summary>
-        /// <returns>True if eligible; false otherwise.</returns>
         public bool CheckEligibility()
         {
-            if (string.IsNullOrEmpty(SchoolIDNumber) || string.IsNullOrEmpty(SchoolIDNumber.Trim()))
+            if (string.IsNullOrWhiteSpace(SchoolIDNumber))
             {
                 return false;
             }

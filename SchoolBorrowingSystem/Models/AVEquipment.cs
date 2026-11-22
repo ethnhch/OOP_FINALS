@@ -1,13 +1,19 @@
+using System;
 using System.Collections.Generic;
 
 namespace SchoolBorrowingSystem.Models
 {
     /// <summary>
-    /// Represents audiovisual equipment such as digital projectors, smart displays, and audio monitors.
-    /// Typically loaned out for short-term durations (hours during a school day) with specific peripheral accessories.
+    /// Audio-visual equipment such as projectors, speakers and smart displays.
+    /// These are borrowed for a few HOURS and usually come with accessories.
     /// </summary>
     public class AVEquipment : SchoolEquipment
     {
+        // Fine rules for AV items (in PHP)
+        public const double FirstLateHourFine = 50.00;
+        public const double ExtraLateHourFine = 25.00;
+        public const int DefaultHours = 4;
+
         public bool IncludesRemote { get; set; }
         public bool IncludesPowerCord { get; set; }
         public bool IncludesHDMI { get; set; }
@@ -19,39 +25,60 @@ namespace SchoolBorrowingSystem.Models
             IncludesRemote = false;
             IncludesPowerCord = true;
             IncludesHDMI = true;
-            BorrowDurationHours = 4; // Default loan window: 4 hours
+            BorrowDurationHours = DefaultHours;
         }
 
-        public AVEquipment(string propertyTag, string itemName, bool includesRemote, bool includesPowerCord, bool includesHDMI, int durationHours = 4, string condition = "Good", bool isAvailable = true)
+        public AVEquipment(string propertyTag, string itemName, bool includesRemote, bool includesPowerCord, bool includesHDMI, int durationHours = DefaultHours, string condition = ConditionGood, bool isAvailable = true)
             : base(propertyTag, itemName, condition, isAvailable)
         {
             IncludesRemote = includesRemote;
             IncludesPowerCord = includesPowerCord;
             IncludesHDMI = includesHDMI;
-            BorrowDurationHours = durationHours > 0 ? durationHours : 4;
+
+            // A loan of 0 or fewer hours makes no sense, so fall back to the default
+            if (durationHours > 0)
+            {
+                BorrowDurationHours = durationHours;
+            }
+            else
+            {
+                BorrowDurationHours = DefaultHours;
+            }
         }
 
-        /// <summary>
-        /// Returns specific borrow window in hours for AV devices.
-        /// </summary>
         public int GetBorrowDurationHours()
         {
             return BorrowDurationHours;
         }
 
         /// <summary>
-        /// Fulfills abstract base contract: AV equipment is measured primarily in hours for same-day operations,
-        /// returning 0 days for same-day loans or days equivalent.
+        /// AV loans are counted in hours, so this only returns whole days (usually 0).
         /// </summary>
         public override int GetBorrowDurationDays()
         {
-            return BorrowDurationHours >= 24 ? BorrowDurationHours / 24 : 0;
+            return BorrowDurationHours / 24;
+        }
+
+        public override DateTime CalculateDueTime(DateTime timeBorrowed)
+        {
+            return timeBorrowed.AddHours(BorrowDurationHours);
         }
 
         /// <summary>
-        /// Generates a customized return checklist based on the peripherals bundled with this AV device.
-        /// Demonstrates runtime polymorphism.
+        /// PHP 50 for the first late hour, then PHP 25 for every hour after that.
+        /// A part of an hour counts as a full hour.
         /// </summary>
+        public override double CalculateLateFine(TimeSpan lateBy)
+        {
+            if (lateBy.TotalMinutes <= 0)
+            {
+                return 0;
+            }
+
+            double lateHours = Math.Ceiling(lateBy.TotalHours);
+            return FirstLateHourFine + ((lateHours - 1) * ExtraLateHourFine);
+        }
+
         public override List<string> GetReturnChecklist()
         {
             List<string> checklist = new List<string>();
@@ -74,6 +101,34 @@ namespace SchoolBorrowingSystem.Models
 
             checklist.Add("Lens and Outer Shell Physical Integrity");
             return checklist;
+        }
+
+        public override string GetCategoryName()
+        {
+            return "AV Equipment";
+        }
+
+        public override string GetLoanPeriodText()
+        {
+            if (BorrowDurationHours == 1)
+            {
+                return "1 hour";
+            }
+            return BorrowDurationHours + " hours";
+        }
+
+        public override string GetDetailsText()
+        {
+            List<string> parts = new List<string>();
+            if (IncludesRemote) parts.Add("Remote");
+            if (IncludesPowerCord) parts.Add("Power cord");
+            if (IncludesHDMI) parts.Add("HDMI");
+
+            if (parts.Count == 0)
+            {
+                return "No accessories";
+            }
+            return string.Join(", ", parts);
         }
 
         public override string ToString()

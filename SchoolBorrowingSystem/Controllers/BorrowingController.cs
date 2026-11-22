@@ -6,13 +6,15 @@ using SchoolBorrowingSystem.Transactions;
 namespace SchoolBorrowingSystem.Controllers
 {
     /// <summary>
-    /// Coordinates equipment borrowing transactions, return processing, penalty calculations,
-    /// and clearance hold administration.
-    /// Fulfills the Controller pattern in GRASP/MVC and coordinates with EquipmentController.
+    /// Handles borrowing and returning: creates borrow slips, computes fines,
+    /// and puts borrowers on clearance hold when something goes wrong.
     /// </summary>
     public class BorrowingController
     {
-        // UML-specified private field
+        // Fees that are the same for every kind of equipment (in PHP)
+        public const double MissingPartsFee = 150.00;
+        public const double DamageFee = 300.00;
+
         private readonly List<BorrowSlip> _activeSlips;
         private readonly List<BorrowSlip> _historicalSlips;
         private readonly EquipmentController _equipmentController;
@@ -27,7 +29,7 @@ namespace SchoolBorrowingSystem.Controllers
         {
             if (equipmentController == null)
             {
-                throw new ArgumentNullException("equipmentController", "EquipmentController coordinator cannot be null.");
+                throw new ArgumentNullException("equipmentController", "EquipmentController cannot be null.");
             }
 
             _activeSlips = new List<BorrowSlip>();
@@ -36,30 +38,86 @@ namespace SchoolBorrowingSystem.Controllers
             _slipSequenceCounter = 1000;
         }
 
-        /// <summary>
-        /// Gets the current active slips in the system.
-        /// </summary>
+        // ---------------------------------------------------------------
+        // Reading data
+        // ---------------------------------------------------------------
+
+        /// <summary>Returns a copy so other classes can't change our list by accident.</summary>
         public List<BorrowSlip> GetActiveSlips()
         {
             return new List<BorrowSlip>(_activeSlips);
         }
 
-        /// <summary>
-        /// Gets the historical (returned) slips for auditing.
-        /// </summary>
         public List<BorrowSlip> GetHistoricalSlips()
         {
             return new List<BorrowSlip>(_historicalSlips);
         }
 
-        /// <summary>
-        /// Processes an equipment borrow request for an eligible borrower.
-        /// Updates equipment availability and coordinates loan durations.
-        /// </summary>
-        /// <param name="borrower">The borrower requesting the item.</param>
-        /// <param name="item">The equipment requested.</param>
-        /// <param name="room">Designated classroom or laboratory.</param>
-        /// <returns>A validated BorrowSlip recording the loan transaction.</returns>
+        public List<BorrowSlip> GetOverdueSlips()
+        {
+            List<BorrowSlip> overdue = new List<BorrowSlip>();
+            foreach (BorrowSlip slip in _activeSlips)
+            {
+                if (slip.IsOverdue())
+                {
+                    overdue.Add(slip);
+                }
+            }
+            return overdue;
+        }
+
+        public BorrowSlip FindActiveSlip(string slipID)
+        {
+            foreach (BorrowSlip slip in _activeSlips)
+            {
+                if (string.Equals(slip.SlipID, slipID, StringComparison.OrdinalIgnoreCase))
+                {
+                    return slip;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>Finds the open slip for an item, or null if the item is not on loan.</summary>
+        public BorrowSlip FindActiveSlipForEquipment(string propertyTag)
+        {
+            foreach (BorrowSlip slip in _activeSlips)
+            {
+                if (slip.Equipment != null && string.Equals(slip.Equipment.PropertyTag, propertyTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    return slip;
+                }
+            }
+            return null;
+        }
+
+        public int CountActiveLoans(SchoolBorrower borrower)
+        {
+            int count = 0;
+            foreach (BorrowSlip slip in _activeSlips)
+            {
+                if (slip.Borrower == borrower)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        public double GetTotalFinesCollected()
+        {
+            double total = 0;
+            foreach (BorrowSlip slip in _historicalSlips)
+            {
+                total += slip.PenaltyCharged;
+            }
+            return total;
+        }
+
+        // ---------------------------------------------------------------
+        // Borrowing
+        // ---------------------------------------------------------------
+
         public BorrowSlip ProcessBorrow(SchoolBorrower borrower, SchoolEquipment item, string room)
         {
             if (borrower == null)
@@ -72,59 +130,96 @@ namespace SchoolBorrowingSystem.Controllers
                 throw new ArgumentNullException("item", "Equipment item cannot be null.");
             }
 
-            // Verify borrower clearance and identity
             if (!borrower.CheckEligibility())
             {
-                throw new InvalidOperationException(
-                    string.Format("Borrower '{0}' (ID: {1}) is ineligible to borrow equipment. Clearance hold: {2}.",
-                        borrower.FullName, borrower.SchoolIDNumber, borrower.HasClearanceHold ? "ACTIVE" : "NONE"));
+                throw new InvalidOperationException(string.Format(
+                    "{0} cannot borrow right now because they have a clearance hold. Lift the hold first in the Borrowers page.",
+                    borrower.FullName));
             }
 
-            // Verify equipment availability
             if (!item.IsAvailable)
             {
-                throw new InvalidOperationException(
-                    string.Format("Equipment '{0}' (PropertyTag: {1}) is not currently available for borrowing (Condition: {2}).",
-                        item.ItemName, item.PropertyTag, item.Condition));
+                throw new InvalidOperationException(string.Format(
+                    "'{0}' ({1}) is not available right now (Condition: {2}).",
+                    item.ItemName, item.PropertyTag, item.Condition));
             }
 
-            // Calculate loan due time polymorphically
+            // Each equipment type knows its own loan period (polymorphism)
             DateTime now = DateTime.Now;
-            DateTime dueTime;
+            DateTime dueTime = item.CalculateDueTime(now);
 
-            if (item is AVEquipment)
-            {
-                AVEquipment av = (AVEquipment)item;
-                dueTime = now.AddHours(av.GetBorrowDurationHours());
-            }
-            else
-            {
-                int durationDays = item.GetBorrowDurationDays();
-                dueTime = durationDays > 0 ? now.AddDays(durationDays) : now.AddHours(4);
-            }
-
-            // Update equipment availability status
             item.IsAvailable = false;
 
-            // Generate unique slip ID
             _slipSequenceCounter++;
-            string slipID = string.Format("SLIP-{0}", _slipSequenceCounter);
+            string slipID = "SLIP-" + _slipSequenceCounter;
 
-            string assignedRoom = string.IsNullOrEmpty(room) ? "General Campus / Lecture Hall" : room.Trim();
+            string assignedRoom = "General Campus / Lecture Hall";
+            if (!string.IsNullOrWhiteSpace(room))
+            {
+                assignedRoom = room.Trim();
+            }
+
             BorrowSlip slip = new BorrowSlip(slipID, borrower, item, assignedRoom, now, dueTime, "Staff Desk");
-
             _activeSlips.Add(slip);
             return slip;
         }
 
+        // ---------------------------------------------------------------
+        // Returning
+        // ---------------------------------------------------------------
+
         /// <summary>
-        /// Processes the return of borrowed equipment, evaluating condition, completeness,
-        /// overdue penalties, and clearance hold requirements.
+        /// True if the condition means the item must go to repair.
         /// </summary>
-        /// <param name="slipID">Transaction slip identifier.</param>
-        /// <param name="condition">Condition assessment upon return (e.g. Good, Fair, Damaged).</param>
-        /// <param name="checklistComplete">Whether all accessories in the return checklist are verified.</param>
-        /// <returns>Total financial penalty / fine incurred (double).</returns>
+        public static bool IsDamagedCondition(string condition)
+        {
+            if (string.IsNullOrEmpty(condition))
+            {
+                return false;
+            }
+
+            return string.Equals(condition, SchoolEquipment.ConditionDamaged, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(condition, SchoolEquipment.ConditionNeedsRepair, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(condition, "Broken", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Works out the fine WITHOUT changing anything.
+        /// The Return page uses this to show a live preview before staff confirm.
+        /// </summary>
+        public double CalculatePenalty(BorrowSlip slip, string condition, bool checklistComplete, DateTime returnTime)
+        {
+            if (slip == null || slip.Equipment == null)
+            {
+                return 0;
+            }
+
+            double total = 0;
+
+            // 1. Late fine (each equipment type has its own rule)
+            if (returnTime > slip.DueTime)
+            {
+                total += slip.Equipment.CalculateLateFine(returnTime - slip.DueTime);
+            }
+
+            // 2. Missing cables / parts
+            if (!checklistComplete)
+            {
+                total += MissingPartsFee;
+            }
+
+            // 3. Damage
+            if (IsDamagedCondition(condition))
+            {
+                total += DamageFee;
+            }
+
+            return total;
+        }
+
+        /// <summary>
+        /// Checks the item back in. Returns the fine in PHP (0 means a clean return).
+        /// </summary>
         public double ProcessReturn(string slipID, string condition, bool checklistComplete)
         {
             if (string.IsNullOrEmpty(slipID))
@@ -138,76 +233,56 @@ namespace SchoolBorrowingSystem.Controllers
                 throw new KeyNotFoundException(string.Format("Active borrow slip '{0}' was not found.", slipID));
             }
 
-            slip.TimeReturned = DateTime.Now;
-            double totalPenalty = 0.0;
-
-            // 1. Calculate Overdue Fine
-            if (slip.IsOverdue())
+            string finalCondition = SchoolEquipment.ConditionGood;
+            if (!string.IsNullOrWhiteSpace(condition))
             {
-                TimeSpan overdueSpan = slip.TimeReturned.Value - slip.DueTime;
-                if (slip.Equipment is AVEquipment)
-                {
-                    // AV equipment: 50.00 base + 25.00 per overdue hour
-                    double overdueHours = Math.Max(1.0, Math.Ceiling(overdueSpan.TotalHours));
-                    totalPenalty += 50.00 + ((overdueHours - 1) * 25.00);
-                }
-                else
-                {
-                    // Lab equipment: 100.00 base + 50.00 per overdue day
-                    double overdueDays = Math.Max(1.0, Math.Ceiling(overdueSpan.TotalDays));
-                    totalPenalty += 100.00 + ((overdueDays - 1) * 50.00);
-                }
+                finalCondition = condition.Trim();
             }
 
-            // 2. Incomplete Return Checklist Penalty
-            if (!checklistComplete)
-            {
-                // Fine for missing cables, remotes, or incomplete component count
-                totalPenalty += 150.00;
-            }
+            DateTime now = DateTime.Now;
+            double penalty = CalculatePenalty(slip, finalCondition, checklistComplete, now);
+            bool isDamaged = IsDamagedCondition(finalCondition);
 
-            // 3. Equipment Condition Assessment & Repair Coordination
-            string finalCondition = string.IsNullOrEmpty(condition) ? "Good" : condition.Trim();
+            // Update the equipment
             slip.Equipment.Condition = finalCondition;
-
-            bool isDamaged = string.Equals(finalCondition, "Damaged", StringComparison.OrdinalIgnoreCase) ||
-                             string.Equals(finalCondition, "Needs Repair", StringComparison.OrdinalIgnoreCase) ||
-                             string.Equals(finalCondition, "Broken", StringComparison.OrdinalIgnoreCase);
-
             if (isDamaged)
             {
-                totalPenalty += 300.00; // Damage restoration fee
+                // Sends it to repair and makes it unavailable
                 _equipmentController.MarkForRepair(slip.Equipment.PropertyTag);
             }
-            else if (checklistComplete)
+            else if (!checklistComplete)
             {
-                // Return item back to active circulation
-                slip.Equipment.IsAvailable = true;
+                // Keep it out of circulation until the missing parts are found
+                slip.Equipment.Condition = SchoolEquipment.ConditionMissingParts;
+                slip.Equipment.IsAvailable = false;
             }
             else
             {
-                // Incomplete checklist retains item as unavailable until accessories are retrieved
-                slip.Equipment.IsAvailable = false;
+                slip.Equipment.IsAvailable = true;
             }
 
-            // 4. Apply clearance hold if violations occur
-            if (totalPenalty > 0 || isDamaged || !checklistComplete)
+            // Any problem at all = clearance hold
+            if (penalty > 0)
             {
                 ApplyClearanceHold(slip.Borrower);
             }
 
-            // Move slip from active to historical records
+            // Save the return details on the slip and move it to history
+            slip.TimeReturned = now;
+            slip.ReturnCondition = finalCondition;
+            slip.ChecklistComplete = checklistComplete;
+            slip.PenaltyCharged = penalty;
+
             _activeSlips.Remove(slip);
             _historicalSlips.Add(slip);
 
-            return totalPenalty;
+            return penalty;
         }
 
-        /// <summary>
-        /// Applies an administrative clearance hold to the specified borrower.
-        /// Prevents future loan transactions until the hold is resolved.
-        /// </summary>
-        /// <param name="borrower">The borrower to place on clearance hold.</param>
+        // ---------------------------------------------------------------
+        // Clearance holds
+        // ---------------------------------------------------------------
+
         public void ApplyClearanceHold(SchoolBorrower borrower)
         {
             if (borrower == null)
@@ -218,9 +293,6 @@ namespace SchoolBorrowingSystem.Controllers
             borrower.HasClearanceHold = true;
         }
 
-        /// <summary>
-        /// Removes an administrative clearance hold from a borrower.
-        /// </summary>
         public void LiftClearanceHold(SchoolBorrower borrower)
         {
             if (borrower == null)
@@ -229,22 +301,6 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             borrower.HasClearanceHold = false;
-        }
-
-        /// <summary>
-        /// Locates an active slip by its ID.
-        /// </summary>
-        public BorrowSlip FindActiveSlip(string slipID)
-        {
-            for (int i = 0; i < _activeSlips.Count; i++)
-            {
-                if (string.Equals(_activeSlips[i].SlipID, slipID, StringComparison.OrdinalIgnoreCase))
-                {
-                    return _activeSlips[i];
-                }
-            }
-
-            return null;
         }
     }
 }
