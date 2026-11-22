@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using SchoolBorrowingSystem.Controllers;
 using SchoolBorrowingSystem.Transactions;
@@ -8,6 +9,7 @@ namespace SchoolBorrowingSystem.UI
     public partial class ReturnForm : Form
     {
         private readonly BorrowingController _borrowingController;
+        private bool _syncingChecklist = false;
 
         public ReturnForm()
         {
@@ -21,8 +23,16 @@ namespace SchoolBorrowingSystem.UI
             LoadActiveSlips();
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            GtaPalette.EnableDarkTitleBar(this);
+        }
+
         private void LoadActiveSlips()
         {
+            if (_borrowingController == null) return;
+
             cmbActiveSlips.Items.Clear();
             foreach (var slip in _borrowingController.GetActiveSlips())
             {
@@ -31,24 +41,136 @@ namespace SchoolBorrowingSystem.UI
                 string itemName = slip.Equipment != null ? slip.Equipment.ItemName : "Unknown";
                 cmbActiveSlips.Items.Add(string.Format("{0} | {1} - {2} ({3})", slip.SlipID, tag, itemName, borrowerName));
             }
-            if (cmbActiveSlips.Items.Count > 0) cmbActiveSlips.SelectedIndex = 0;
+
+            if (cmbActiveSlips.Items.Count > 0)
+            {
+                cmbActiveSlips.SelectedIndex = 0;
+            }
+            else
+            {
+                lstChecklist.Items.Clear();
+                lblSlipMeta.Text = "NO ACTIVE BORROW SLIPS CURRENTLY OUT";
+                lblSlipMeta.ForeColor = GtaPalette.TextSecondary;
+                lblRiskBanner.Text = "STANDBY  //  ALL EQUIPMENT ACCOUNTED FOR";
+                lblRiskBanner.ForeColor = GtaPalette.ViceTeal;
+            }
+        }
+
+        private BorrowSlip GetSelectedSlip()
+        {
+            if (_borrowingController == null || cmbActiveSlips.SelectedIndex < 0) return null;
+
+            int idx = 0;
+            foreach (var slip in _borrowingController.GetActiveSlips())
+            {
+                if (idx == cmbActiveSlips.SelectedIndex) return slip;
+                idx++;
+            }
+            return null;
         }
 
         private void CmbActiveSlips_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_borrowingController == null) return;
+
+            lblInlineAlert.Visible = false;
+            _syncingChecklist = true;
             lstChecklist.Items.Clear();
-            int idx = 0;
-            foreach (var slip in _borrowingController.GetActiveSlips())
+
+            BorrowSlip selected = GetSelectedSlip();
+            if (selected != null)
             {
-                if (idx == cmbActiveSlips.SelectedIndex && slip.Equipment != null)
+                if (selected.Equipment != null)
                 {
-                    foreach (var item in slip.Equipment.GetReturnChecklist())
+                    foreach (var item in selected.Equipment.GetReturnChecklist())
                     {
-                        lstChecklist.Items.Add("• " + item);
+                        lstChecklist.Items.Add(item, true);
                     }
+                }
+
+                chkChecklistIntact.Checked = true;
+
+                bool overdue = selected.IsOverdue();
+                string room = string.IsNullOrWhiteSpace(selected.RoomToBeUsed) ? "N/A" : selected.RoomToBeUsed.ToUpperInvariant();
+                lblSlipMeta.Text = string.Format("ROOM: {0}  //  DUE: {1:MM/dd HH:mm}  //  {2}",
+                    room, selected.DueTime, overdue ? "★★★ OVERDUE" : "ON TIME");
+                lblSlipMeta.ForeColor = overdue ? GtaPalette.StatusWanted : GtaPalette.ViceTeal;
+            }
+
+            _syncingChecklist = false;
+            UpdateRiskIndicator(chkChecklistIntact.Checked);
+        }
+
+        private void LstChecklist_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            if (_syncingChecklist) return;
+
+            // Compute whether all items will be checked after this click completes
+            bool allChecked = true;
+            for (int i = 0; i < lstChecklist.Items.Count; i++)
+            {
+                bool isChecked = (i == e.Index) ? (e.NewValue == CheckState.Checked) : lstChecklist.GetItemChecked(i);
+                if (!isChecked)
+                {
+                    allChecked = false;
                     break;
                 }
-                idx++;
+            }
+
+            _syncingChecklist = true;
+            chkChecklistIntact.Checked = allChecked;
+            _syncingChecklist = false;
+
+            UpdateRiskIndicator(allChecked);
+        }
+
+        private void ChkChecklistIntact_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_syncingChecklist) return;
+
+            _syncingChecklist = true;
+            for (int i = 0; i < lstChecklist.Items.Count; i++)
+            {
+                lstChecklist.SetItemChecked(i, chkChecklistIntact.Checked);
+            }
+            _syncingChecklist = false;
+
+            UpdateRiskIndicator(chkChecklistIntact.Checked);
+        }
+
+        private void CmbCondition_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_borrowingController == null) return;
+            UpdateRiskIndicator(chkChecklistIntact.Checked);
+        }
+
+        private void UpdateRiskIndicator(bool checklistIntact)
+        {
+            BorrowSlip selected = GetSelectedSlip();
+            if (selected == null) return;
+
+            string condition = cmbCondition.SelectedItem != null ? cmbCondition.SelectedItem.ToString() : "Good";
+            bool isDamaged = condition == "Damaged" || condition == "Needs Repair";
+            bool isOverdue = selected.IsOverdue();
+
+            var flags = new List<string>();
+            if (isOverdue) flags.Add("OVERDUE");
+            if (!checklistIntact) flags.Add("MISSING PARTS");
+            if (isDamaged) flags.Add(condition.ToUpperInvariant());
+
+            if (flags.Count > 0)
+            {
+                lblRiskBanner.Text = "★★★ PENALTY & CLEARANCE HOLD RISK  //  " + string.Join(" + ", flags);
+                lblRiskBanner.ForeColor = GtaPalette.StatusWanted;
+                cardInspection.AccentColor = GtaPalette.StatusWanted;
+                btnProcess.AccentColor = GtaPalette.StatusWanted;
+            }
+            else
+            {
+                lblRiskBanner.Text = "✓ CLEAN INSPECTION  //  GOOD STANDING • PHP 0.00 PENALTY EXPECTED";
+                lblRiskBanner.ForeColor = GtaPalette.StatusClear;
+                cardInspection.AccentColor = GtaPalette.SunsetPeach;
+                btnProcess.AccentColor = GtaPalette.StatusClear;
             }
         }
 
@@ -57,17 +179,12 @@ namespace SchoolBorrowingSystem.UI
             if (cmbActiveSlips.SelectedIndex < 0)
             {
                 AudioHelper.PlayError();
-                MessageBox.Show("There are no active borrow slips to return.", "No Active Slips", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                lblInlineAlert.Text = "ALERT  //  THERE ARE NO ACTIVE BORROW SLIPS TO RETURN.";
+                lblInlineAlert.Visible = true;
                 return;
             }
 
-            BorrowSlip selectedSlip = null;
-            int idx = 0;
-            foreach (var slip in _borrowingController.GetActiveSlips())
-            {
-                if (idx == cmbActiveSlips.SelectedIndex) { selectedSlip = slip; break; }
-                idx++;
-            }
+            BorrowSlip selectedSlip = GetSelectedSlip();
             if (selectedSlip == null) return;
 
             string condition = cmbCondition.SelectedItem != null ? cmbCondition.SelectedItem.ToString() : "Good";
@@ -101,7 +218,8 @@ namespace SchoolBorrowingSystem.UI
             catch (Exception ex)
             {
                 AudioHelper.PlayError();
-                MessageBox.Show(ex.Message, "Return Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblInlineAlert.Text = "RETURN ERROR  //  " + ex.Message.ToUpperInvariant();
+                lblInlineAlert.Visible = true;
             }
         }
 

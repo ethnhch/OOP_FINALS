@@ -8,26 +8,44 @@ namespace SchoolBorrowingSystem.UI
     {
         private System.ComponentModel.IContainer components = null;
 
-        private Panel headerPanel;
-        private Label lblTitle;
-        private Label lblSubtitle;
-        private Button _btnMute;
+        private GtaHeaderBar headerPanel;
+        private Label _lblClock;
+        private GtaTileButton _btnMute;
+        private Panel pnlNavBar;
+        private GtaNavTabButton btnNavInventory;
+        private GtaNavTabButton btnNavBorrow;
+        private GtaNavTabButton btnNavReturn;
+        private GtaNavTabButton btnNavBorrowers;
+        private GtaNavTabButton btnNavQa;
+
+        private Panel pnlHudStrip;
+        private TableLayoutPanel tlpHud;
+        private GtaHudStatTile hudAvailable;
+        private GtaHudStatTile hudActiveSlips;
+        private GtaHudStatTile hudInRepair;
+        private GtaHudStatTile hudHolds;
+
         private Label _lblStatusBanner;
-        private TabControl tabs;
+        private GtaToastBanner _toastBanner;
+        private System.Windows.Forms.Timer _clockTimer;
+        private GtaTabControl tabs;
 
         // Tab 1: Inventory
         private TabPage tabInventory;
         private Panel pnlInvTop;
+        private TextBox _txtSearchEquipment;
         private CheckBox _chkAvailableOnly;
-        private Button btnMarkRepair;
-        private Button btnCompleteRepair;
-        private Button btnSave;
-        private Button btnLoad;
-        private DataGridView _dgvEquipment;
+        private GtaTileButton btnAddEquipment;
+        private GtaTileButton btnMarkRepair;
+        private GtaTileButton btnCompleteRepair;
+        private GtaTileButton btnSave;
+        private GtaTileButton btnLoad;
+        private GtaDataGridView _dgvEquipment;
 
         // Tab 2: Borrow
         private TabPage tabBorrow;
-        private GroupBox grpRequest;
+        private TableLayoutPanel tlpBorrow;
+        private GtaCardPanel grpRequest;
         private Label lblBorrower;
         private ComboBox _cmbBorrowers;
         private Label lblEquip;
@@ -36,33 +54,35 @@ namespace SchoolBorrowingSystem.UI
         private TextBox _txtRoom;
         private Label lblCheck;
         private ListBox _lstChecklistPreview;
-        private Button btnIssueSlip;
-        private GroupBox grpReceipt;
+        private GtaTileButton btnIssueSlip;
+        private GtaCardPanel grpReceipt;
         private TextBox _txtBorrowReceipt;
 
         // Tab 3: Returns
         private TabPage tabReturn;
         private Label lblActive;
-        private DataGridView _dgvActiveSlips;
+        private GtaDataGridView _dgvActiveSlips;
         private Panel actionPanel;
         private CheckBox _chkChecklistIntact;
         private Label lblCond;
         private ComboBox _cmbReturnCondition;
-        private Button btnProcessReturn;
+        private GtaTileButton btnProcessReturn;
         private Label lblHist;
-        private DataGridView _dgvHistoricalSlips;
+        private GtaDataGridView _dgvHistoricalSlips;
 
         // Tab 4: Borrowers
         private TabPage tabBorrowers;
         private Panel pnlBorTop;
-        private Button btnApplyHold;
-        private Button btnLiftHold;
-        private DataGridView _dgvBorrowers;
+        private TextBox _txtSearchBorrowers;
+        private GtaTileButton btnApplyHold;
+        private GtaTileButton btnLiftHold;
+        private GtaDataGridView _dgvBorrowers;
 
         // Tab 5: QA Tests
         private TabPage tabQa;
         private Panel pnlQaTop;
-        private Button btnRunQa;
+        private GtaTileButton btnRunQa;
+        private Label _lblQaBadge;
         private TextBox _txtQaOutput;
 
         protected override void Dispose(bool disposing)
@@ -77,24 +97,44 @@ namespace SchoolBorrowingSystem.UI
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.headerPanel = new Panel();
-            this.lblTitle = new Label();
-            this.lblSubtitle = new Label();
-            this._btnMute = new Button();
+
+            this.headerPanel = new GtaHeaderBar();
+            this._lblClock = new Label();
+            this._btnMute = new GtaTileButton();
+
+            this.pnlNavBar = new Panel();
+            this.btnNavInventory = new GtaNavTabButton();
+            this.btnNavBorrow = new GtaNavTabButton();
+            this.btnNavReturn = new GtaNavTabButton();
+            this.btnNavBorrowers = new GtaNavTabButton();
+            this.btnNavQa = new GtaNavTabButton();
+
+            this.pnlHudStrip = new Panel();
+            this.tlpHud = new TableLayoutPanel();
+            this.hudAvailable = new GtaHudStatTile();
+            this.hudActiveSlips = new GtaHudStatTile();
+            this.hudInRepair = new GtaHudStatTile();
+            this.hudHolds = new GtaHudStatTile();
+
             this._lblStatusBanner = new Label();
-            this.tabs = new TabControl();
+            this._toastBanner = new GtaToastBanner();
+            this._clockTimer = new System.Windows.Forms.Timer(this.components);
+            this.tabs = new GtaTabControl();
 
             this.tabInventory = new TabPage();
             this.pnlInvTop = new Panel();
+            this._txtSearchEquipment = new TextBox();
             this._chkAvailableOnly = new CheckBox();
-            this.btnMarkRepair = new Button();
-            this.btnCompleteRepair = new Button();
-            this.btnSave = new Button();
-            this.btnLoad = new Button();
-            this._dgvEquipment = new DataGridView();
+            this.btnAddEquipment = new GtaTileButton();
+            this.btnMarkRepair = new GtaTileButton();
+            this.btnCompleteRepair = new GtaTileButton();
+            this.btnSave = new GtaTileButton();
+            this.btnLoad = new GtaTileButton();
+            this._dgvEquipment = new GtaDataGridView();
 
             this.tabBorrow = new TabPage();
-            this.grpRequest = new GroupBox();
+            this.tlpBorrow = new TableLayoutPanel();
+            this.grpRequest = new GtaCardPanel();
             this.lblBorrower = new Label();
             this._cmbBorrowers = new ComboBox();
             this.lblEquip = new Label();
@@ -103,38 +143,44 @@ namespace SchoolBorrowingSystem.UI
             this._txtRoom = new TextBox();
             this.lblCheck = new Label();
             this._lstChecklistPreview = new ListBox();
-            this.btnIssueSlip = new Button();
-            this.grpReceipt = new GroupBox();
+            this.btnIssueSlip = new GtaTileButton();
+            this.grpReceipt = new GtaCardPanel();
             this._txtBorrowReceipt = new TextBox();
 
             this.tabReturn = new TabPage();
             this.lblActive = new Label();
-            this._dgvActiveSlips = new DataGridView();
+            this._dgvActiveSlips = new GtaDataGridView();
             this.actionPanel = new Panel();
             this._chkChecklistIntact = new CheckBox();
             this.lblCond = new Label();
             this._cmbReturnCondition = new ComboBox();
-            this.btnProcessReturn = new Button();
+            this.btnProcessReturn = new GtaTileButton();
             this.lblHist = new Label();
-            this._dgvHistoricalSlips = new DataGridView();
+            this._dgvHistoricalSlips = new GtaDataGridView();
 
             this.tabBorrowers = new TabPage();
             this.pnlBorTop = new Panel();
-            this.btnApplyHold = new Button();
-            this.btnLiftHold = new Button();
-            this._dgvBorrowers = new DataGridView();
+            this._txtSearchBorrowers = new TextBox();
+            this.btnApplyHold = new GtaTileButton();
+            this.btnLiftHold = new GtaTileButton();
+            this._dgvBorrowers = new GtaDataGridView();
 
             this.tabQa = new TabPage();
             this.pnlQaTop = new Panel();
-            this.btnRunQa = new Button();
+            this.btnRunQa = new GtaTileButton();
+            this._lblQaBadge = new Label();
             this._txtQaOutput = new TextBox();
 
             this.headerPanel.SuspendLayout();
+            this.pnlNavBar.SuspendLayout();
+            this.pnlHudStrip.SuspendLayout();
+            this.tlpHud.SuspendLayout();
             this.tabs.SuspendLayout();
             this.tabInventory.SuspendLayout();
             this.pnlInvTop.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this._dgvEquipment)).BeginInit();
             this.tabBorrow.SuspendLayout();
+            this.tlpBorrow.SuspendLayout();
             this.grpRequest.SuspendLayout();
             this.grpReceipt.SuspendLayout();
             this.tabReturn.SuspendLayout();
@@ -148,80 +194,168 @@ namespace SchoolBorrowingSystem.UI
             this.pnlQaTop.SuspendLayout();
             this.SuspendLayout();
 
-            // Header Panel
-            this.headerPanel.BackColor = Color.FromArgb(24, 49, 83);
-            this.headerPanel.Controls.Add(this.lblTitle);
-            this.headerPanel.Controls.Add(this.lblSubtitle);
+            // ==================== HEADER BAR ====================
+            this.headerPanel.Controls.Add(this._lblClock);
             this.headerPanel.Controls.Add(this._btnMute);
             this.headerPanel.Dock = DockStyle.Top;
             this.headerPanel.Location = new Point(0, 0);
             this.headerPanel.Name = "headerPanel";
-            this.headerPanel.Padding = new Padding(16, 10, 16, 10);
-            this.headerPanel.Size = new Size(1084, 72);
-            this.headerPanel.TabIndex = 1;
+            this.headerPanel.Size = new Size(1180, 76);
+            this.headerPanel.SubtitleText = "LEONIDA CAMPUS COMMAND  //  AV & LABORATORY INVENTORY";
+            this.headerPanel.TitleText = "SCHOOL EQUIPMENT BORROWING SYSTEM";
 
-            this.lblTitle.AutoSize = true;
-            this.lblTitle.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            this.lblTitle.ForeColor = Color.White;
-            this.lblTitle.Location = new Point(16, 10);
-            this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new Size(420, 25);
-            this.lblTitle.Text = "SCHOOL EQUIPMENT BORROWING SYSTEM";
+            this._lblClock.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this._lblClock.BackColor = Color.Transparent;
+            this._lblClock.Font = new Font("Bahnschrift SemiBold", 10F, FontStyle.Bold);
+            this._lblClock.ForeColor = Color.FromArgb(255, 190, 146);
+            this._lblClock.Location = new Point(845, 25);
+            this._lblClock.Name = "_lblClock";
+            this._lblClock.Size = new Size(175, 24);
+            this._lblClock.Text = "VICE TIME  //  10:45 PM";
+            this._lblClock.TextAlign = ContentAlignment.MiddleRight;
 
-            this.lblSubtitle.AutoSize = true;
-            this.lblSubtitle.Font = new Font("Segoe UI", 9F);
-            this.lblSubtitle.ForeColor = Color.FromArgb(180, 205, 235);
-            this.lblSubtitle.Location = new Point(18, 40);
-            this.lblSubtitle.Name = "lblSubtitle";
-            this.lblSubtitle.Size = new Size(370, 17);
-            this.lblSubtitle.Text = "Object-Oriented Management Dashboard | AV and Laboratory Inventory";
-
+            this._btnMute.AccentColor = Color.FromArgb(62, 232, 168);
             this._btnMute.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            this._btnMute.BackColor = Color.FromArgb(46, 125, 50);
-            this._btnMute.FlatAppearance.BorderSize = 0;
-            this._btnMute.FlatStyle = FlatStyle.Flat;
-            this._btnMute.ForeColor = Color.White;
-            this._btnMute.Location = new Point(945, 18);
+            this._btnMute.Location = new Point(1030, 19);
             this._btnMute.Name = "_btnMute";
-            this._btnMute.Size = new Size(120, 36);
-            this._btnMute.Text = "Audio: ON";
-            this._btnMute.UseVisualStyleBackColor = false;
+            this._btnMute.Size = new Size(132, 36);
+            this._btnMute.Text = "AUDIO: ON";
             this._btnMute.Click += new EventHandler(this.BtnMute_Click);
 
-            // Status Banner
-            this._lblStatusBanner.BackColor = Color.FromArgb(230, 236, 245);
+            // ==================== GTA 6 PAUSE-MENU NAV BAR ====================
+            this.pnlNavBar.BackColor = Color.FromArgb(19, 18, 30);
+            this.pnlNavBar.Controls.Add(this.btnNavQa);
+            this.pnlNavBar.Controls.Add(this.btnNavBorrowers);
+            this.pnlNavBar.Controls.Add(this.btnNavReturn);
+            this.pnlNavBar.Controls.Add(this.btnNavBorrow);
+            this.pnlNavBar.Controls.Add(this.btnNavInventory);
+            this.pnlNavBar.Dock = DockStyle.Top;
+            this.pnlNavBar.Height = 42;
+            this.pnlNavBar.Name = "pnlNavBar";
+
+            this.btnNavInventory.Dock = DockStyle.Left;
+            this.btnNavInventory.IsActive = true;
+            this.btnNavInventory.Name = "btnNavInventory";
+            this.btnNavInventory.Size = new Size(215, 42);
+            this.btnNavInventory.Text = "EQUIPMENT INVENTORY";
+            this.btnNavInventory.Click += new EventHandler(this.BtnNav_Click);
+
+            this.btnNavBorrow.Dock = DockStyle.Left;
+            this.btnNavBorrow.IsActive = false;
+            this.btnNavBorrow.Name = "btnNavBorrow";
+            this.btnNavBorrow.Size = new Size(195, 42);
+            this.btnNavBorrow.Text = "BORROW EQUIPMENT";
+            this.btnNavBorrow.Click += new EventHandler(this.BtnNav_Click);
+
+            this.btnNavReturn.Dock = DockStyle.Left;
+            this.btnNavReturn.IsActive = false;
+            this.btnNavReturn.Name = "btnNavReturn";
+            this.btnNavReturn.Size = new Size(220, 42);
+            this.btnNavReturn.Text = "RETURNS & ACTIVE SLIPS";
+            this.btnNavReturn.Click += new EventHandler(this.BtnNav_Click);
+
+            this.btnNavBorrowers.Dock = DockStyle.Left;
+            this.btnNavBorrowers.IsActive = false;
+            this.btnNavBorrowers.Name = "btnNavBorrowers";
+            this.btnNavBorrowers.Size = new Size(205, 42);
+            this.btnNavBorrowers.Text = "BORROWERS & HOLDS";
+            this.btnNavBorrowers.Click += new EventHandler(this.BtnNav_Click);
+
+            this.btnNavQa.Dock = DockStyle.Left;
+            this.btnNavQa.IsActive = false;
+            this.btnNavQa.Name = "btnNavQa";
+            this.btnNavQa.Size = new Size(205, 42);
+            this.btnNavQa.Text = "AUTOMATED QA TESTS";
+            this.btnNavQa.Click += new EventHandler(this.BtnNav_Click);
+
+            // ==================== LIVE HUD TELEMETRY STRIP ====================
+            this.pnlHudStrip.BackColor = Color.FromArgb(16, 15, 26);
+            this.pnlHudStrip.Controls.Add(this.tlpHud);
+            this.pnlHudStrip.Dock = DockStyle.Top;
+            this.pnlHudStrip.Height = 64;
+            this.pnlHudStrip.Name = "pnlHudStrip";
+            this.pnlHudStrip.Padding = new Padding(8, 6, 8, 2);
+
+            this.tlpHud.ColumnCount = 4;
+            this.tlpHud.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            this.tlpHud.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            this.tlpHud.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            this.tlpHud.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            this.tlpHud.Controls.Add(this.hudAvailable, 0, 0);
+            this.tlpHud.Controls.Add(this.hudActiveSlips, 1, 0);
+            this.tlpHud.Controls.Add(this.hudInRepair, 2, 0);
+            this.tlpHud.Controls.Add(this.hudHolds, 3, 0);
+            this.tlpHud.Dock = DockStyle.Fill;
+            this.tlpHud.RowCount = 1;
+            this.tlpHud.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            this.hudAvailable.AccentColor = Color.FromArgb(62, 232, 168);
+            this.hudAvailable.CaptionText = "READY FOR DISPATCH";
+            this.hudAvailable.Dock = DockStyle.Fill;
+            this.hudAvailable.LabelText = "AVAILABLE GEAR";
+            this.hudAvailable.ValueText = "4";
+
+            this.hudActiveSlips.AccentColor = Color.FromArgb(95, 216, 204);
+            this.hudActiveSlips.CaptionText = "CURRENTLY CHECKED OUT";
+            this.hudActiveSlips.Dock = DockStyle.Fill;
+            this.hudActiveSlips.LabelText = "ACTIVE SLIPS";
+            this.hudActiveSlips.ValueText = "0";
+
+            this.hudInRepair.AccentColor = Color.FromArgb(255, 190, 146);
+            this.hudInRepair.CaptionText = "OFFLINE / MAINTENANCE";
+            this.hudInRepair.Dock = DockStyle.Fill;
+            this.hudInRepair.LabelText = "UNAVAILABLE / REPAIR";
+            this.hudInRepair.ValueText = "0";
+
+            this.hudHolds.AccentColor = Color.FromArgb(255, 68, 92);
+            this.hudHolds.CaptionText = "WANTED CLEARANCE LOCK";
+            this.hudHolds.Dock = DockStyle.Fill;
+            this.hudHolds.LabelText = "CLEARANCE HOLDS";
+            this.hudHolds.ValueText = "1";
+
+            // ==================== STATUS BAR & TOAST BANNER ====================
+            this._lblStatusBanner.BackColor = Color.FromArgb(12, 11, 20);
             this._lblStatusBanner.Dock = DockStyle.Bottom;
-            this._lblStatusBanner.ForeColor = Color.FromArgb(30, 41, 59);
-            this._lblStatusBanner.Location = new Point(0, 651);
+            this._lblStatusBanner.Font = new Font("Bahnschrift SemiBold", 9.25F, FontStyle.Bold);
+            this._lblStatusBanner.ForeColor = Color.FromArgb(95, 216, 204);
             this._lblStatusBanner.Name = "_lblStatusBanner";
-            this._lblStatusBanner.Padding = new Padding(12, 0, 12, 0);
-            this._lblStatusBanner.Size = new Size(1084, 30);
-            this._lblStatusBanner.Text = "Ready.";
+            this._lblStatusBanner.Padding = new Padding(14, 0, 14, 0);
+            this._lblStatusBanner.Size = new Size(1180, 30);
+            this._lblStatusBanner.Text = "READY  //  PRESS CTRL+1..5 TO SWITCH SECTIONS";
             this._lblStatusBanner.TextAlign = ContentAlignment.MiddleLeft;
 
-            // Tabs
+            this._toastBanner.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            this._toastBanner.Location = new Point(750, 86);
+            this._toastBanner.Name = "_toastBanner";
+            this._toastBanner.Visible = false;
+
+            this._clockTimer.Interval = 1000;
+            this._clockTimer.Tick += new EventHandler(this.ClockTimer_Tick);
+
+            // ==================== TABS ====================
             this.tabs.Controls.Add(this.tabInventory);
             this.tabs.Controls.Add(this.tabBorrow);
             this.tabs.Controls.Add(this.tabReturn);
             this.tabs.Controls.Add(this.tabBorrowers);
             this.tabs.Controls.Add(this.tabQa);
             this.tabs.Dock = DockStyle.Fill;
-            this.tabs.Location = new Point(0, 72);
+            this.tabs.Margin = new Padding(0);
             this.tabs.Name = "tabs";
-            this.tabs.Padding = new Point(14, 6);
             this.tabs.SelectedIndex = 0;
-            this.tabs.Size = new Size(1084, 579);
             this.tabs.SelectedIndexChanged += new EventHandler(this.Tabs_SelectedIndexChanged);
 
-            // Tab 1: Inventory
-            this.tabInventory.BackColor = Color.White;
+            // ==================== TAB 1: EQUIPMENT INVENTORY ====================
+            this.tabInventory.BackColor = Color.FromArgb(16, 15, 26);
             this.tabInventory.Controls.Add(this._dgvEquipment);
             this.tabInventory.Controls.Add(this.pnlInvTop);
             this.tabInventory.Name = "tabInventory";
             this.tabInventory.Padding = new Padding(12);
             this.tabInventory.Text = "Equipment Inventory";
 
+            this.pnlInvTop.BackColor = Color.FromArgb(16, 15, 26);
+            this.pnlInvTop.Controls.Add(this._txtSearchEquipment);
             this.pnlInvTop.Controls.Add(this._chkAvailableOnly);
+            this.pnlInvTop.Controls.Add(this.btnAddEquipment);
             this.pnlInvTop.Controls.Add(this.btnMarkRepair);
             this.pnlInvTop.Controls.Add(this.btnCompleteRepair);
             this.pnlInvTop.Controls.Add(this.btnSave);
@@ -229,77 +363,83 @@ namespace SchoolBorrowingSystem.UI
             this.pnlInvTop.Dock = DockStyle.Top;
             this.pnlInvTop.Height = 48;
 
+            this._txtSearchEquipment.BackColor = Color.FromArgb(36, 33, 56);
+            this._txtSearchEquipment.BorderStyle = BorderStyle.FixedSingle;
+            this._txtSearchEquipment.Font = new Font("Segoe UI", 9.5F);
+            this._txtSearchEquipment.ForeColor = Color.FromArgb(245, 244, 252);
+            this._txtSearchEquipment.Location = new Point(0, 10);
+            this._txtSearchEquipment.Name = "_txtSearchEquipment";
+            this._txtSearchEquipment.PlaceholderText = "Search tag, name, category...";
+            this._txtSearchEquipment.Size = new Size(215, 24);
+            this._txtSearchEquipment.TextChanged += new EventHandler(this.TxtSearchEquipment_TextChanged);
+
             this._chkAvailableOnly.AutoSize = true;
-            this._chkAvailableOnly.Location = new Point(4, 13);
-            this._chkAvailableOnly.Text = "Show Available Only";
+            this._chkAvailableOnly.ForeColor = Color.FromArgb(245, 244, 252);
+            this._chkAvailableOnly.Location = new Point(226, 12);
+            this._chkAvailableOnly.Text = "Available Only";
             this._chkAvailableOnly.CheckedChanged += new EventHandler(this.ChkAvailableOnly_CheckedChanged);
-            this.btnMarkRepair.BackColor = Color.FromArgb(211, 47, 47);
-            this.btnMarkRepair.FlatAppearance.BorderSize = 0;
-            this.btnMarkRepair.FlatStyle = FlatStyle.Flat;
-            this.btnMarkRepair.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnMarkRepair.ForeColor = Color.White;
-            this.btnMarkRepair.Location = new Point(210, 6);
-            this.btnMarkRepair.Size = new Size(215, 34);
-            this.btnMarkRepair.Text = "Mark Selected for Repair";
-            this.btnMarkRepair.UseVisualStyleBackColor = false;
+
+            this.btnAddEquipment.AccentColor = Color.FromArgb(95, 216, 204);
+            this.btnAddEquipment.Location = new Point(352, 6);
+            this.btnAddEquipment.Size = new Size(135, 34);
+            this.btnAddEquipment.Text = "+ ADD GEAR";
+            this.btnAddEquipment.Click += new EventHandler(this.BtnAddEquipment_Click);
+
+            this.btnMarkRepair.AccentColor = Color.FromArgb(255, 68, 92);
+            this.btnMarkRepair.Location = new Point(495, 6);
+            this.btnMarkRepair.Size = new Size(175, 34);
+            this.btnMarkRepair.Text = "MARK FOR REPAIR";
             this.btnMarkRepair.Click += new EventHandler(this.BtnMarkRepair_Click);
-            this.btnCompleteRepair.BackColor = Color.FromArgb(46, 125, 50);
-            this.btnCompleteRepair.FlatAppearance.BorderSize = 0;
-            this.btnCompleteRepair.FlatStyle = FlatStyle.Flat;
-            this.btnCompleteRepair.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnCompleteRepair.ForeColor = Color.White;
-            this.btnCompleteRepair.Location = new Point(435, 6);
-            this.btnCompleteRepair.Size = new Size(225, 34);
-            this.btnCompleteRepair.Text = "Restore / Complete Repair";
-            this.btnCompleteRepair.UseVisualStyleBackColor = false;
+
+            this.btnCompleteRepair.AccentColor = Color.FromArgb(62, 232, 168);
+            this.btnCompleteRepair.Location = new Point(678, 6);
+            this.btnCompleteRepair.Size = new Size(180, 34);
+            this.btnCompleteRepair.Text = "COMPLETE REPAIR";
             this.btnCompleteRepair.Click += new EventHandler(this.BtnCompleteRepair_Click);
-            this.btnSave.BackColor = Color.FromArgb(25, 118, 210);
-            this.btnSave.FlatAppearance.BorderSize = 0;
-            this.btnSave.FlatStyle = FlatStyle.Flat;
-            this.btnSave.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnSave.ForeColor = Color.White;
-            this.btnSave.Location = new Point(670, 6);
-            this.btnSave.Size = new Size(155, 34);
-            this.btnSave.Text = "Save Inventory";
-            this.btnSave.UseVisualStyleBackColor = false;
+
+            this.btnSave.AccentColor = Color.FromArgb(255, 114, 107);
+            this.btnSave.Location = new Point(866, 6);
+            this.btnSave.Size = new Size(135, 34);
+            this.btnSave.Text = "SAVE FILE";
             this.btnSave.Click += new EventHandler(this.BtnSave_Click);
-            this.btnLoad.BackColor = Color.FromArgb(96, 125, 139);
-            this.btnLoad.FlatAppearance.BorderSize = 0;
-            this.btnLoad.FlatStyle = FlatStyle.Flat;
-            this.btnLoad.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnLoad.ForeColor = Color.White;
-            this.btnLoad.Location = new Point(835, 6);
+
+            this.btnLoad.AccentColor = Color.FromArgb(255, 190, 146);
+            this.btnLoad.Location = new Point(1009, 6);
             this.btnLoad.Size = new Size(125, 34);
-            this.btnLoad.Text = "Load File";
-            this.btnLoad.UseVisualStyleBackColor = false;
+            this.btnLoad.Text = "LOAD FILE";
             this.btnLoad.Click += new EventHandler(this.BtnLoad_Click);
+
             this._dgvEquipment.AllowUserToAddRows = false;
             this._dgvEquipment.AllowUserToDeleteRows = false;
             this._dgvEquipment.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            this._dgvEquipment.BackgroundColor = Color.White;
-            this._dgvEquipment.BorderStyle = BorderStyle.FixedSingle;
-            this._dgvEquipment.ColumnHeadersHeight = 34;
             this._dgvEquipment.Dock = DockStyle.Fill;
-            this._dgvEquipment.EnableHeadersVisualStyles = false;
-            this._dgvEquipment.Location = new Point(12, 60);
             this._dgvEquipment.MultiSelect = false;
             this._dgvEquipment.ReadOnly = true;
-            this._dgvEquipment.RowHeadersVisible = false;
-            this._dgvEquipment.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            this._dgvEquipment.Size = new Size(1052, 475);
-            this._dgvEquipment.Columns.Add("Tag", "Property Tag");
-            this._dgvEquipment.Columns.Add("Type", "Category");
-            this._dgvEquipment.Columns.Add("Name", "Equipment Name");
-            this._dgvEquipment.Columns.Add("Condition", "Condition");
-            this._dgvEquipment.Columns.Add("Status", "Availability");
-            this._dgvEquipment.Columns.Add("Details", "Specifications");
-            // Tab 2: Borrow
-            this.tabBorrow.BackColor = Color.White;
-            this.tabBorrow.Controls.Add(this.grpRequest);
-            this.tabBorrow.Controls.Add(this.grpReceipt);
+            this._dgvEquipment.Columns.Add("Tag", "PROPERTY TAG");
+            this._dgvEquipment.Columns.Add("Type", "CATEGORY");
+            this._dgvEquipment.Columns.Add("Name", "EQUIPMENT NAME");
+            this._dgvEquipment.Columns.Add("Condition", "CONDITION");
+            this._dgvEquipment.Columns.Add("Status", "AVAILABILITY");
+            this._dgvEquipment.Columns.Add("Details", "SPECIFICATIONS");
+
+            // ==================== TAB 2: BORROW EQUIPMENT ====================
+            this.tabBorrow.BackColor = Color.FromArgb(16, 15, 26);
+            this.tabBorrow.Controls.Add(this.tlpBorrow);
             this.tabBorrow.Name = "tabBorrow";
-            this.tabBorrow.Padding = new Padding(16);
+            this.tabBorrow.Padding = new Padding(12);
             this.tabBorrow.Text = "Borrow Equipment";
+
+            this.tlpBorrow.ColumnCount = 2;
+            this.tlpBorrow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48F));
+            this.tlpBorrow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52F));
+            this.tlpBorrow.Controls.Add(this.grpRequest, 0, 0);
+            this.tlpBorrow.Controls.Add(this.grpReceipt, 1, 0);
+            this.tlpBorrow.Dock = DockStyle.Fill;
+            this.tlpBorrow.RowCount = 1;
+            this.tlpBorrow.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            this.grpRequest.AccentColor = Color.FromArgb(228, 36, 153);
+            this.grpRequest.CardTitle = "NEW BORROW DISPATCH REQUEST";
             this.grpRequest.Controls.Add(this.lblBorrower);
             this.grpRequest.Controls.Add(this._cmbBorrowers);
             this.grpRequest.Controls.Add(this.lblEquip);
@@ -309,68 +449,87 @@ namespace SchoolBorrowingSystem.UI
             this.grpRequest.Controls.Add(this.lblCheck);
             this.grpRequest.Controls.Add(this._lstChecklistPreview);
             this.grpRequest.Controls.Add(this.btnIssueSlip);
-            this.grpRequest.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.grpRequest.Location = new Point(16, 16);
-            this.grpRequest.Size = new Size(490, 490);
-            this.grpRequest.Text = "New Borrow Request";
+            this.grpRequest.Dock = DockStyle.Fill;
+            this.grpRequest.Margin = new Padding(0, 0, 10, 0);
+
             this.lblBorrower.AutoSize = true;
-            this.lblBorrower.Font = new Font("Segoe UI", 9.5F);
-            this.lblBorrower.Location = new Point(18, 36);
-            this.lblBorrower.Text = "Select Registered Borrower:";
+            this.lblBorrower.ForeColor = Color.FromArgb(168, 164, 194);
+            this.lblBorrower.Location = new Point(16, 48);
+            this.lblBorrower.Text = "SELECT REGISTERED BORROWER";
+
+            this._cmbBorrowers.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this._cmbBorrowers.BackColor = Color.FromArgb(36, 33, 56);
             this._cmbBorrowers.DropDownStyle = ComboBoxStyle.DropDownList;
-            this._cmbBorrowers.Font = new Font("Segoe UI", 9.5F);
-            this._cmbBorrowers.Location = new Point(18, 62);
-            this._cmbBorrowers.Width = 450;
+            this._cmbBorrowers.FlatStyle = FlatStyle.Flat;
+            this._cmbBorrowers.ForeColor = Color.FromArgb(245, 244, 252);
+            this._cmbBorrowers.Location = new Point(16, 70);
+            this._cmbBorrowers.Size = new Size(500, 24);
+
             this.lblEquip.AutoSize = true;
-            this.lblEquip.Font = new Font("Segoe UI", 9.5F);
-            this.lblEquip.Location = new Point(18, 106);
-            this.lblEquip.Text = "Select Available Equipment:";
+            this.lblEquip.ForeColor = Color.FromArgb(168, 164, 194);
+            this.lblEquip.Location = new Point(16, 108);
+            this.lblEquip.Text = "SELECT AVAILABLE EQUIPMENT";
+
+            this._cmbAvailableEquipment.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this._cmbAvailableEquipment.BackColor = Color.FromArgb(36, 33, 56);
             this._cmbAvailableEquipment.DropDownStyle = ComboBoxStyle.DropDownList;
-            this._cmbAvailableEquipment.Font = new Font("Segoe UI", 9.5F);
-            this._cmbAvailableEquipment.Location = new Point(18, 132);
-            this._cmbAvailableEquipment.Width = 450;
+            this._cmbAvailableEquipment.FlatStyle = FlatStyle.Flat;
+            this._cmbAvailableEquipment.ForeColor = Color.FromArgb(245, 244, 252);
+            this._cmbAvailableEquipment.Location = new Point(16, 130);
+            this._cmbAvailableEquipment.Size = new Size(500, 24);
             this._cmbAvailableEquipment.SelectedIndexChanged += new EventHandler(this.CmbAvailableEquipment_SelectedIndexChanged);
+
             this.lblRoom.AutoSize = true;
-            this.lblRoom.Font = new Font("Segoe UI", 9.5F);
-            this.lblRoom.Location = new Point(18, 176);
-            this.lblRoom.Text = "Room / Laboratory Where Equipment Will Be Used:";
-            this._txtRoom.Font = new Font("Segoe UI", 9.5F);
-            this._txtRoom.Location = new Point(18, 202);
+            this.lblRoom.ForeColor = Color.FromArgb(168, 164, 194);
+            this.lblRoom.Location = new Point(16, 168);
+            this.lblRoom.Text = "DESTINATION ROOM / LABORATORY";
+
+            this._txtRoom.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this._txtRoom.BackColor = Color.FromArgb(36, 33, 56);
+            this._txtRoom.BorderStyle = BorderStyle.FixedSingle;
+            this._txtRoom.ForeColor = Color.FromArgb(245, 244, 252);
+            this._txtRoom.Location = new Point(16, 190);
+            this._txtRoom.Size = new Size(500, 24);
             this._txtRoom.Text = "Room 304 - Lecture Hall";
-            this._txtRoom.Width = 450;
+
             this.lblCheck.AutoSize = true;
-            this.lblCheck.Font = new Font("Segoe UI", 9.5F);
-            this.lblCheck.Location = new Point(18, 246);
-            this.lblCheck.Text = "Required Return Checklist (Polymorphic):";
-            this._lstChecklistPreview.BackColor = Color.FromArgb(248, 250, 252);
-            this._lstChecklistPreview.Font = new Font("Segoe UI", 9F);
-            this._lstChecklistPreview.Location = new Point(18, 272);
-            this._lstChecklistPreview.Size = new Size(450, 140);
-            this.btnIssueSlip.BackColor = Color.FromArgb(46, 125, 50);
-            this.btnIssueSlip.FlatAppearance.BorderSize = 0;
-            this.btnIssueSlip.FlatStyle = FlatStyle.Flat;
-            this.btnIssueSlip.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
-            this.btnIssueSlip.ForeColor = Color.White;
-            this.btnIssueSlip.Location = new Point(18, 426);
-            this.btnIssueSlip.Size = new Size(450, 42);
-            this.btnIssueSlip.Text = "Issue Official Borrow Slip";
-            this.btnIssueSlip.UseVisualStyleBackColor = false;
+            this.lblCheck.ForeColor = Color.FromArgb(95, 216, 204);
+            this.lblCheck.Location = new Point(16, 228);
+            this.lblCheck.Text = "POLYMORPHIC RETURN CHECKLIST";
+
+            this._lstChecklistPreview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this._lstChecklistPreview.BackColor = Color.FromArgb(18, 16, 30);
+            this._lstChecklistPreview.BorderStyle = BorderStyle.FixedSingle;
+            this._lstChecklistPreview.Font = new Font("Segoe UI", 9.25F);
+            this._lstChecklistPreview.ForeColor = Color.FromArgb(245, 244, 252);
+            this._lstChecklistPreview.Location = new Point(16, 250);
+            this._lstChecklistPreview.Size = new Size(500, 150);
+
+            this.btnIssueSlip.AccentColor = Color.FromArgb(62, 232, 168);
+            this.btnIssueSlip.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            this.btnIssueSlip.Location = new Point(16, 412);
+            this.btnIssueSlip.Size = new Size(500, 42);
+            this.btnIssueSlip.Text = "ISSUE OFFICIAL BORROW SLIP";
             this.btnIssueSlip.Click += new EventHandler(this.BtnIssueSlip_Click);
+
+            this.grpReceipt.AccentColor = Color.FromArgb(95, 216, 204);
+            this.grpReceipt.CardTitle = "DISPATCH RECEIPT TERMINAL";
             this.grpReceipt.Controls.Add(this._txtBorrowReceipt);
-            this.grpReceipt.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.grpReceipt.Location = new Point(525, 16);
-            this.grpReceipt.Size = new Size(525, 490);
-            this.grpReceipt.Text = "Generated Borrow Slip Receipt";
-            this._txtBorrowReceipt.BackColor = Color.FromArgb(248, 250, 252);
-            this._txtBorrowReceipt.Font = new Font("Consolas", 9.5F);
-            this._txtBorrowReceipt.Location = new Point(16, 32);
+            this.grpReceipt.Dock = DockStyle.Fill;
+            this.grpReceipt.Margin = new Padding(10, 0, 0, 0);
+
+            this._txtBorrowReceipt.BackColor = Color.FromArgb(12, 11, 20);
+            this._txtBorrowReceipt.BorderStyle = BorderStyle.FixedSingle;
+            this._txtBorrowReceipt.Dock = DockStyle.Fill;
+            this._txtBorrowReceipt.Font = new Font("Consolas", 10F);
+            this._txtBorrowReceipt.ForeColor = Color.FromArgb(95, 216, 204);
             this._txtBorrowReceipt.Multiline = true;
             this._txtBorrowReceipt.ReadOnly = true;
             this._txtBorrowReceipt.ScrollBars = ScrollBars.Vertical;
-            this._txtBorrowReceipt.Size = new Size(490, 440);
-            this._txtBorrowReceipt.Text = "Select a borrower and available equipment, then click 'Issue Official Borrow Slip'.";
-            // Tab 3: Returns
-            this.tabReturn.BackColor = Color.White;
+            this._txtBorrowReceipt.Text = ">> DISPATCH TERMINAL ONLINE.\r\n>> Select a borrower and available equipment, then click 'ISSUE OFFICIAL BORROW SLIP'.";
+
+            // ==================== TAB 3: RETURNS & ACTIVE SLIPS ====================
+            this.tabReturn.BackColor = Color.FromArgb(16, 15, 26);
             this.tabReturn.Controls.Add(this._dgvHistoricalSlips);
             this.tabReturn.Controls.Add(this.lblHist);
             this.tabReturn.Controls.Add(this.actionPanel);
@@ -379,178 +538,196 @@ namespace SchoolBorrowingSystem.UI
             this.tabReturn.Name = "tabReturn";
             this.tabReturn.Padding = new Padding(12);
             this.tabReturn.Text = "Returns and Active Slips";
+
             this.lblActive.Dock = DockStyle.Top;
-            this.lblActive.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            this.lblActive.Font = new Font("Bahnschrift SemiBold", 10F, FontStyle.Bold);
+            this.lblActive.ForeColor = Color.FromArgb(95, 216, 204);
             this.lblActive.Height = 28;
-            this.lblActive.Text = "Active Borrow Slips (Select a slip below to process return):";
+            this.lblActive.Text = "ACTIVE BORROW SLIPS  //  SELECT A SLIP TO PROCESS RETURN";
+
             this._dgvActiveSlips.AllowUserToAddRows = false;
             this._dgvActiveSlips.AllowUserToDeleteRows = false;
             this._dgvActiveSlips.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            this._dgvActiveSlips.BackgroundColor = Color.White;
-            this._dgvActiveSlips.BorderStyle = BorderStyle.FixedSingle;
-            this._dgvActiveSlips.ColumnHeadersHeight = 34;
             this._dgvActiveSlips.Dock = DockStyle.Top;
-            this._dgvActiveSlips.EnableHeadersVisualStyles = false;
-            this._dgvActiveSlips.Height = 190;
+            this._dgvActiveSlips.Height = 185;
             this._dgvActiveSlips.MultiSelect = false;
             this._dgvActiveSlips.ReadOnly = true;
-            this._dgvActiveSlips.RowHeadersVisible = false;
-            this._dgvActiveSlips.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            this._dgvActiveSlips.Columns.Add("SlipID", "Slip ID");
-            this._dgvActiveSlips.Columns.Add("Borrower", "Borrower");
-            this._dgvActiveSlips.Columns.Add("Tag", "Equipment Tag");
-            this._dgvActiveSlips.Columns.Add("Item", "Equipment Name");
-            this._dgvActiveSlips.Columns.Add("Room", "Room");
-            this._dgvActiveSlips.Columns.Add("Due", "Due Time");
-            this._dgvActiveSlips.Columns.Add("Status", "Status");
-            this.actionPanel.BackColor = Color.FromArgb(241, 245, 249);
+            this._dgvActiveSlips.Columns.Add("SlipID", "SLIP ID");
+            this._dgvActiveSlips.Columns.Add("Borrower", "BORROWER");
+            this._dgvActiveSlips.Columns.Add("Tag", "EQUIPMENT TAG");
+            this._dgvActiveSlips.Columns.Add("Item", "EQUIPMENT NAME");
+            this._dgvActiveSlips.Columns.Add("Room", "ROOM");
+            this._dgvActiveSlips.Columns.Add("Due", "DUE TIME");
+            this._dgvActiveSlips.Columns.Add("Status", "STATUS");
+
+            this.actionPanel.BackColor = Color.FromArgb(25, 23, 39);
             this.actionPanel.Controls.Add(this._chkChecklistIntact);
             this.actionPanel.Controls.Add(this.lblCond);
             this.actionPanel.Controls.Add(this._cmbReturnCondition);
             this.actionPanel.Controls.Add(this.btnProcessReturn);
             this.actionPanel.Dock = DockStyle.Top;
             this.actionPanel.Height = 56;
+
             this._chkChecklistIntact.AutoSize = true;
             this._chkChecklistIntact.Checked = true;
-            this._chkChecklistIntact.Location = new Point(14, 17);
+            this._chkChecklistIntact.ForeColor = Color.FromArgb(245, 244, 252);
+            this._chkChecklistIntact.Location = new Point(16, 18);
             this._chkChecklistIntact.Text = "All checklist components present and intact";
+
             this.lblCond.AutoSize = true;
-            this.lblCond.Location = new Point(365, 18);
-            this.lblCond.Text = "Return Condition:";
+            this.lblCond.ForeColor = Color.FromArgb(168, 164, 194);
+            this.lblCond.Location = new Point(365, 19);
+            this.lblCond.Text = "RETURN CONDITION:";
+
+            this._cmbReturnCondition.BackColor = Color.FromArgb(36, 33, 56);
             this._cmbReturnCondition.DropDownStyle = ComboBoxStyle.DropDownList;
+            this._cmbReturnCondition.FlatStyle = FlatStyle.Flat;
+            this._cmbReturnCondition.ForeColor = Color.FromArgb(245, 244, 252);
             this._cmbReturnCondition.Items.AddRange(new object[] { "Good", "Fair", "Damaged", "Needs Repair" });
-            this._cmbReturnCondition.Location = new Point(495, 14);
+            this._cmbReturnCondition.Location = new Point(512, 15);
             this._cmbReturnCondition.SelectedIndex = 0;
-            this._cmbReturnCondition.Width = 160;
-            this.btnProcessReturn.BackColor = Color.FromArgb(25, 118, 210);
-            this.btnProcessReturn.FlatAppearance.BorderSize = 0;
-            this.btnProcessReturn.FlatStyle = FlatStyle.Flat;
-            this.btnProcessReturn.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnProcessReturn.ForeColor = Color.White;
-            this.btnProcessReturn.Location = new Point(675, 11);
-            this.btnProcessReturn.Size = new Size(235, 34);
-            this.btnProcessReturn.Text = "Process Equipment Return";
-            this.btnProcessReturn.UseVisualStyleBackColor = false;
+            this._cmbReturnCondition.Width = 165;
+
+            this.btnProcessReturn.AccentColor = Color.FromArgb(255, 190, 146);
+            this.btnProcessReturn.Location = new Point(698, 11);
+            this.btnProcessReturn.Size = new Size(245, 34);
+            this.btnProcessReturn.Text = "PROCESS EQUIPMENT RETURN";
             this.btnProcessReturn.Click += new EventHandler(this.BtnProcessReturn_Click);
+
             this.lblHist.Dock = DockStyle.Top;
-            this.lblHist.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.lblHist.Height = 30;
-            this.lblHist.Padding = new Padding(0, 6, 0, 0);
-            this.lblHist.Text = "Completed / Historical Return Slips:";
+            this.lblHist.Font = new Font("Bahnschrift SemiBold", 10F, FontStyle.Bold);
+            this.lblHist.ForeColor = Color.FromArgb(255, 190, 146);
+            this.lblHist.Height = 32;
+            this.lblHist.Padding = new Padding(0, 8, 0, 0);
+            this.lblHist.Text = "COMPLETED / HISTORICAL RETURN ARCHIVE";
+
             this._dgvHistoricalSlips.AllowUserToAddRows = false;
             this._dgvHistoricalSlips.AllowUserToDeleteRows = false;
             this._dgvHistoricalSlips.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            this._dgvHistoricalSlips.BackgroundColor = Color.White;
-            this._dgvHistoricalSlips.BorderStyle = BorderStyle.FixedSingle;
-            this._dgvHistoricalSlips.ColumnHeadersHeight = 34;
             this._dgvHistoricalSlips.Dock = DockStyle.Fill;
-            this._dgvHistoricalSlips.EnableHeadersVisualStyles = false;
             this._dgvHistoricalSlips.MultiSelect = false;
             this._dgvHistoricalSlips.ReadOnly = true;
-            this._dgvHistoricalSlips.RowHeadersVisible = false;
-            this._dgvHistoricalSlips.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            this._dgvHistoricalSlips.Columns.Add("SlipID", "Slip ID");
-            this._dgvHistoricalSlips.Columns.Add("Borrower", "Borrower");
-            this._dgvHistoricalSlips.Columns.Add("Item", "Equipment");
-            this._dgvHistoricalSlips.Columns.Add("Returned", "Time Returned");
-            this._dgvHistoricalSlips.Columns.Add("Summary", "Transaction Record");
-            // Tab 4: Borrowers
-            this.tabBorrowers.BackColor = Color.White;
+            this._dgvHistoricalSlips.Columns.Add("SlipID", "SLIP ID");
+            this._dgvHistoricalSlips.Columns.Add("Borrower", "BORROWER");
+            this._dgvHistoricalSlips.Columns.Add("Item", "EQUIPMENT");
+            this._dgvHistoricalSlips.Columns.Add("Returned", "TIME RETURNED");
+            this._dgvHistoricalSlips.Columns.Add("Summary", "TRANSACTION RECORD");
+
+            // ==================== TAB 4: BORROWERS & HOLDS ====================
+            this.tabBorrowers.BackColor = Color.FromArgb(16, 15, 26);
             this.tabBorrowers.Controls.Add(this._dgvBorrowers);
             this.tabBorrowers.Controls.Add(this.pnlBorTop);
             this.tabBorrowers.Name = "tabBorrowers";
             this.tabBorrowers.Padding = new Padding(12);
             this.tabBorrowers.Text = "Borrowers and Holds";
+
+            this.pnlBorTop.BackColor = Color.FromArgb(16, 15, 26);
+            this.pnlBorTop.Controls.Add(this._txtSearchBorrowers);
             this.pnlBorTop.Controls.Add(this.btnApplyHold);
             this.pnlBorTop.Controls.Add(this.btnLiftHold);
             this.pnlBorTop.Dock = DockStyle.Top;
             this.pnlBorTop.Height = 48;
-            this.btnApplyHold.BackColor = Color.FromArgb(211, 47, 47);
-            this.btnApplyHold.FlatAppearance.BorderSize = 0;
-            this.btnApplyHold.FlatStyle = FlatStyle.Flat;
-            this.btnApplyHold.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnApplyHold.ForeColor = Color.White;
-            this.btnApplyHold.Location = new Point(4, 6);
-            this.btnApplyHold.Size = new Size(210, 34);
-            this.btnApplyHold.Text = "Apply Clearance Hold";
-            this.btnApplyHold.UseVisualStyleBackColor = false;
+
+            this._txtSearchBorrowers.BackColor = Color.FromArgb(36, 33, 56);
+            this._txtSearchBorrowers.BorderStyle = BorderStyle.FixedSingle;
+            this._txtSearchBorrowers.Font = new Font("Segoe UI", 9.5F);
+            this._txtSearchBorrowers.ForeColor = Color.FromArgb(245, 244, 252);
+            this._txtSearchBorrowers.Location = new Point(0, 10);
+            this._txtSearchBorrowers.Name = "_txtSearchBorrowers";
+            this._txtSearchBorrowers.PlaceholderText = "Search ID, name, or department...";
+            this._txtSearchBorrowers.Size = new Size(260, 24);
+            this._txtSearchBorrowers.TextChanged += new EventHandler(this.TxtSearchBorrowers_TextChanged);
+
+            this.btnApplyHold.AccentColor = Color.FromArgb(255, 68, 92);
+            this.btnApplyHold.Location = new Point(276, 6);
+            this.btnApplyHold.Size = new Size(215, 34);
+            this.btnApplyHold.Text = "★ APPLY CLEARANCE HOLD";
             this.btnApplyHold.Click += new EventHandler(this.BtnApplyHold_Click);
-            this.btnLiftHold.BackColor = Color.FromArgb(46, 125, 50);
-            this.btnLiftHold.FlatAppearance.BorderSize = 0;
-            this.btnLiftHold.FlatStyle = FlatStyle.Flat;
-            this.btnLiftHold.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnLiftHold.ForeColor = Color.White;
-            this.btnLiftHold.Location = new Point(225, 6);
-            this.btnLiftHold.Size = new Size(210, 34);
-            this.btnLiftHold.Text = "Lift Clearance Hold";
-            this.btnLiftHold.UseVisualStyleBackColor = false;
+
+            this.btnLiftHold.AccentColor = Color.FromArgb(62, 232, 168);
+            this.btnLiftHold.Location = new Point(502, 6);
+            this.btnLiftHold.Size = new Size(205, 34);
+            this.btnLiftHold.Text = "LIFT CLEARANCE HOLD";
             this.btnLiftHold.Click += new EventHandler(this.BtnLiftHold_Click);
+
             this._dgvBorrowers.AllowUserToAddRows = false;
             this._dgvBorrowers.AllowUserToDeleteRows = false;
             this._dgvBorrowers.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            this._dgvBorrowers.BackgroundColor = Color.White;
-            this._dgvBorrowers.BorderStyle = BorderStyle.FixedSingle;
-            this._dgvBorrowers.ColumnHeadersHeight = 34;
             this._dgvBorrowers.Dock = DockStyle.Fill;
-            this._dgvBorrowers.EnableHeadersVisualStyles = false;
             this._dgvBorrowers.MultiSelect = false;
             this._dgvBorrowers.ReadOnly = true;
-            this._dgvBorrowers.RowHeadersVisible = false;
-            this._dgvBorrowers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            this._dgvBorrowers.Columns.Add("ID", "School ID");
-            this._dgvBorrowers.Columns.Add("Name", "Full Name");
-            this._dgvBorrowers.Columns.Add("Role", "Role");
-            this._dgvBorrowers.Columns.Add("Dept", "Department");
-            this._dgvBorrowers.Columns.Add("Hold", "Clearance Status");
-            // Tab 5: QA Tests
-            this.tabQa.BackColor = Color.White;
+            this._dgvBorrowers.Columns.Add("ID", "SCHOOL ID");
+            this._dgvBorrowers.Columns.Add("Name", "FULL NAME");
+            this._dgvBorrowers.Columns.Add("Role", "ROLE");
+            this._dgvBorrowers.Columns.Add("Dept", "DEPARTMENT");
+            this._dgvBorrowers.Columns.Add("Hold", "CLEARANCE STATUS");
+
+            // ==================== TAB 5: AUTOMATED QA TESTS ====================
+            this.tabQa.BackColor = Color.FromArgb(16, 15, 26);
             this.tabQa.Controls.Add(this._txtQaOutput);
             this.tabQa.Controls.Add(this.pnlQaTop);
             this.tabQa.Name = "tabQa";
             this.tabQa.Padding = new Padding(12);
             this.tabQa.Text = "Automated QA Tests";
+
+            this.pnlQaTop.BackColor = Color.FromArgb(16, 15, 26);
             this.pnlQaTop.Controls.Add(this.btnRunQa);
+            this.pnlQaTop.Controls.Add(this._lblQaBadge);
             this.pnlQaTop.Dock = DockStyle.Top;
             this.pnlQaTop.Height = 48;
-            this.btnRunQa.BackColor = Color.FromArgb(106, 27, 154);
-            this.btnRunQa.FlatAppearance.BorderSize = 0;
-            this.btnRunQa.FlatStyle = FlatStyle.Flat;
-            this.btnRunQa.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnRunQa.ForeColor = Color.White;
-            this.btnRunQa.Location = new Point(4, 6);
-            this.btnRunQa.Size = new Size(280, 34);
-            this.btnRunQa.Text = "Run All 44 Automated QA Tests";
-            this.btnRunQa.UseVisualStyleBackColor = false;
+
+            this.btnRunQa.AccentColor = Color.FromArgb(228, 36, 153);
+            this.btnRunQa.Location = new Point(0, 6);
+            this.btnRunQa.Size = new Size(290, 34);
+            this.btnRunQa.Text = "RUN ALL 44 AUTOMATED QA TESTS";
             this.btnRunQa.Click += new EventHandler(this.BtnRunQa_Click);
-            this._txtQaOutput.BackColor = Color.FromArgb(18, 24, 38);
+
+            this._lblQaBadge.AutoSize = true;
+            this._lblQaBadge.Font = new Font("Bahnschrift SemiBold", 10F, FontStyle.Bold);
+            this._lblQaBadge.ForeColor = Color.FromArgb(168, 164, 194);
+            this._lblQaBadge.Location = new Point(308, 14);
+            this._lblQaBadge.Text = "QA DIAGNOSTIC DECK  //  STANDBY";
+
+            this._txtQaOutput.BackColor = Color.FromArgb(10, 9, 18);
+            this._txtQaOutput.BorderStyle = BorderStyle.FixedSingle;
             this._txtQaOutput.Dock = DockStyle.Fill;
-            this._txtQaOutput.Font = new Font("Consolas", 9.5F);
-            this._txtQaOutput.ForeColor = Color.FromArgb(134, 239, 172);
+            this._txtQaOutput.Font = new Font("Consolas", 9.75F);
+            this._txtQaOutput.ForeColor = Color.FromArgb(62, 232, 168);
             this._txtQaOutput.Multiline = true;
             this._txtQaOutput.ReadOnly = true;
             this._txtQaOutput.ScrollBars = ScrollBars.Both;
-            this._txtQaOutput.Text = "Click 'Run All 44 Automated QA Tests' to verify all OOP assertions.";
-            // MainForm
+            this._txtQaOutput.Text = ">> QA ENGINE READY.\r\n>> Click 'RUN ALL 44 AUTOMATED QA TESTS' to verify all OOP assertions.";
+
+            // ==================== MAINFORM ====================
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.BackColor = Color.FromArgb(245, 247, 250);
-            this.ClientSize = new Size(1084, 681);
+            this.BackColor = Color.FromArgb(16, 15, 26);
+            this.ClientSize = new Size(1180, 740);
+            this.Controls.Add(this._toastBanner);
             this.Controls.Add(this.tabs);
+            this.Controls.Add(this.pnlHudStrip);
+            this.Controls.Add(this.pnlNavBar);
             this.Controls.Add(this.headerPanel);
             this.Controls.Add(this._lblStatusBanner);
             this.Font = new Font("Segoe UI", 9.5F);
-            this.MinimumSize = new Size(980, 620);
+            this.KeyPreview = true;
+            this.MinimumSize = new Size(1120, 680);
             this.Name = "MainForm";
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.Text = "School Equipment Borrowing Management System (OOP Finals)";
+            this.Text = "School Equipment Borrowing Management System — Vice Campus Edition";
             this.Shown += new EventHandler(this.MainForm_Shown);
+            this.KeyDown += new KeyEventHandler(this.MainForm_KeyDown);
+
             this.headerPanel.ResumeLayout(false);
-            this.headerPanel.PerformLayout();
+            this.pnlNavBar.ResumeLayout(false);
+            this.pnlHudStrip.ResumeLayout(false);
+            this.tlpHud.ResumeLayout(false);
             this.tabs.ResumeLayout(false);
             this.tabInventory.ResumeLayout(false);
             this.pnlInvTop.ResumeLayout(false);
             this.pnlInvTop.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this._dgvEquipment)).EndInit();
             this.tabBorrow.ResumeLayout(false);
+            this.tlpBorrow.ResumeLayout(false);
             this.grpRequest.ResumeLayout(false);
             this.grpRequest.PerformLayout();
             this.grpReceipt.ResumeLayout(false);
@@ -562,9 +739,11 @@ namespace SchoolBorrowingSystem.UI
             ((System.ComponentModel.ISupportInitialize)(this._dgvHistoricalSlips)).EndInit();
             this.tabBorrowers.ResumeLayout(false);
             this.pnlBorTop.ResumeLayout(false);
+            this.pnlBorTop.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this._dgvBorrowers)).EndInit();
             this.tabQa.ResumeLayout(false);
             this.pnlQaTop.ResumeLayout(false);
+            this.pnlQaTop.PerformLayout();
             this.ResumeLayout(false);
         }
     }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Forms;
 using SchoolBorrowingSystem.Controllers;
 using SchoolBorrowingSystem.Models;
+using SchoolBorrowingSystem.Models.UI;
 using SchoolBorrowingSystem.UI;
 
 namespace SchoolBorrowingSystem
@@ -28,6 +29,12 @@ namespace SchoolBorrowingSystem
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            using (var loadingScreen = new GtaLoadingForm())
+            {
+                loadingScreen.ShowDialog();
+            }
+
             Application.Run(new MainForm(_equipmentController, _borrowingController, _borrowers));
             return 0;
         }

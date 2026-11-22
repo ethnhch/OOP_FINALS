@@ -30,21 +30,78 @@ namespace SchoolBorrowingSystem.UI
             InitializeComponent();
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            GtaPalette.EnableDarkTitleBar(this);
+        }
+
         private void MainForm_Shown(object sender, EventArgs e)
         {
+            UpdateClockDisplay();
+            _clockTimer.Start();
             AudioHelper.PlayStartup();
+            _toastBanner.ShowBanner("SYSTEM ONLINE", "Welcome to Vice Campus Equipment Command.", GtaPalette.ViceTeal);
+        }
+
+        private void ClockTimer_Tick(object sender, EventArgs e)
+        {
+            UpdateClockDisplay();
+        }
+
+        private void UpdateClockDisplay()
+        {
+            _lblClock.Text = "VICE TIME  //  " + DateTime.Now.ToString("hh:mm:ss tt");
+        }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!e.Control) return;
+
+            if (e.KeyCode == Keys.D1) SwitchTab(0);
+            else if (e.KeyCode == Keys.D2) SwitchTab(1);
+            else if (e.KeyCode == Keys.D3) SwitchTab(2);
+            else if (e.KeyCode == Keys.D4) SwitchTab(3);
+            else if (e.KeyCode == Keys.D5) SwitchTab(4);
+        }
+
+        private void BtnNav_Click(object sender, EventArgs e)
+        {
+            if (sender == btnNavInventory) SwitchTab(0);
+            else if (sender == btnNavBorrow) SwitchTab(1);
+            else if (sender == btnNavReturn) SwitchTab(2);
+            else if (sender == btnNavBorrowers) SwitchTab(3);
+            else if (sender == btnNavQa) SwitchTab(4);
+        }
+
+        private void SwitchTab(int index)
+        {
+            if (tabs.SelectedIndex != index)
+                tabs.SelectedIndex = index;
+
+            SyncNavButtons(index);
+        }
+
+        private void SyncNavButtons(int activeIndex)
+        {
+            btnNavInventory.IsActive = (activeIndex == 0);
+            btnNavBorrow.IsActive = (activeIndex == 1);
+            btnNavReturn.IsActive = (activeIndex == 2);
+            btnNavBorrowers.IsActive = (activeIndex == 3);
+            btnNavQa.IsActive = (activeIndex == 4);
         }
 
         private void BtnMute_Click(object sender, EventArgs e)
         {
             AudioHelper.IsMuted = !AudioHelper.IsMuted;
-            _btnMute.Text = AudioHelper.IsMuted ? "Audio: MUTED" : "Audio: ON";
-            _btnMute.BackColor = AudioHelper.IsMuted ? Color.FromArgb(183, 28, 28) : Color.FromArgb(46, 125, 50);
+            _btnMute.Text = AudioHelper.IsMuted ? "AUDIO: MUTED" : "AUDIO: ON";
+            _btnMute.AccentColor = AudioHelper.IsMuted ? GtaPalette.StatusWanted : GtaPalette.StatusClear;
             if (!AudioHelper.IsMuted) AudioHelper.PlayMenuClick();
         }
 
         private void Tabs_SelectedIndexChanged(object sender, EventArgs e)
         {
+            SyncNavButtons(tabs.SelectedIndex);
             AudioHelper.PlayMenuClick();
         }
 
@@ -52,6 +109,21 @@ namespace SchoolBorrowingSystem.UI
         {
             AudioHelper.PlayMenuClick();
             RefreshEquipmentGrid();
+        }
+
+        private void TxtSearchEquipment_TextChanged(object sender, EventArgs e)
+        {
+            RefreshEquipmentGrid();
+        }
+
+        private void TxtSearchBorrowers_TextChanged(object sender, EventArgs e)
+        {
+            RefreshBorrowersGrid();
+        }
+
+        private void BtnAddEquipment_Click(object sender, EventArgs e)
+        {
+            OpenAddEquipmentDialog();
         }
 
         private void CmbAvailableEquipment_SelectedIndexChanged(object sender, EventArgs e)
@@ -66,11 +138,12 @@ namespace SchoolBorrowingSystem.UI
                 _equipmentController.SaveInventory();
                 AudioHelper.PlaySuccess();
                 SetStatus("Inventory saved to 'school_inventory.txt'.", false);
-                MessageBox.Show("Inventory successfully saved to 'school_inventory.txt'.", "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _toastBanner.ShowBanner("INVENTORY SAVED", "Synced safely to school_inventory.txt.", GtaPalette.StatusClear);
             }
             catch (Exception ex)
             {
                 AudioHelper.PlayError();
+                _toastBanner.ShowBanner("SAVE FAILED", ex.Message, GtaPalette.StatusWanted);
                 MessageBox.Show(ex.Message, "Save Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -83,10 +156,12 @@ namespace SchoolBorrowingSystem.UI
                 RefreshAllViews();
                 AudioHelper.PlaySuccess();
                 SetStatus("Inventory loaded from disk.", false);
+                _toastBanner.ShowBanner("INVENTORY LOADED", "Registry synced from school_inventory.txt.", GtaPalette.ViceTeal);
             }
             catch (Exception ex)
             {
                 AudioHelper.PlayError();
+                _toastBanner.ShowBanner("LOAD FAILED", ex.Message, GtaPalette.StatusWanted);
                 MessageBox.Show(ex.Message, "Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -141,7 +216,7 @@ namespace SchoolBorrowingSystem.UI
             if (string.IsNullOrEmpty(tag))
             {
                 AudioHelper.PlayError();
-                MessageBox.Show("Please select an equipment row first.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _toastBanner.ShowBanner("NO TARGET SELECTED", "Select an equipment row first.", GtaPalette.StatusWanted);
                 return;
             }
 
@@ -151,6 +226,7 @@ namespace SchoolBorrowingSystem.UI
                 RefreshAllViews();
                 AudioHelper.PlayWarning();
                 SetStatus(string.Format("Equipment '{0}' marked as Under Repair.", tag), true);
+                _toastBanner.ShowBanner("UNIT FLAGGED FOR REPAIR", tag + " pulled from active circulation.", GtaPalette.SunsetPeach);
             }
             catch (Exception ex)
             {
@@ -165,7 +241,7 @@ namespace SchoolBorrowingSystem.UI
             if (string.IsNullOrEmpty(tag))
             {
                 AudioHelper.PlayError();
-                MessageBox.Show("Please select an equipment row first.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _toastBanner.ShowBanner("NO TARGET SELECTED", "Select an equipment row first.", GtaPalette.StatusWanted);
                 return;
             }
 
@@ -177,6 +253,7 @@ namespace SchoolBorrowingSystem.UI
                 RefreshAllViews();
                 AudioHelper.PlaySuccess();
                 SetStatus(string.Format("Equipment '{0}' repaired and restored to Good / Available status.", tag), false);
+                _toastBanner.ShowBanner("REPAIR COMPLETE", tag + " restored to Good / Available status.", GtaPalette.StatusClear);
             }
         }
 
@@ -185,7 +262,7 @@ namespace SchoolBorrowingSystem.UI
             if (_cmbBorrowers.SelectedIndex < 0 || _cmbAvailableEquipment.SelectedIndex < 0)
             {
                 AudioHelper.PlayError();
-                MessageBox.Show("Please select both a borrower and an available equipment item.", "Missing Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _toastBanner.ShowBanner("MISSING SELECTION", "Choose both a borrower and available equipment.", GtaPalette.StatusWanted);
                 return;
             }
 
@@ -201,27 +278,30 @@ namespace SchoolBorrowingSystem.UI
 
                 var checklist = item.GetReturnChecklist();
                 _txtBorrowReceipt.Text =
-                    "====================================================\r\n" +
-                    "              OFFICIAL BORROW SLIP ISSUED           \r\n" +
-                    "====================================================\r\n" +
-                    string.Format("Slip ID     : {0}\r\n", slip.SlipID) +
-                    string.Format("Borrower    : {0} ({1})\r\n", borrower.FullName, borrower.SchoolIDNumber) +
-                    string.Format("Department  : {0} ({1})\r\n", borrower.Department, borrower.Role) +
-                    string.Format("Equipment   : {0} ({1})\r\n", item.ItemName, item.PropertyTag) +
-                    string.Format("Room        : {0}\r\n", slip.RoomToBeUsed) +
-                    string.Format("Borrowed At : {0:yyyy-MM-dd HH:mm}\r\n", slip.TimeBorrowed) +
-                    string.Format("Due Time    : {0:yyyy-MM-dd HH:mm}\r\n", slip.DueTime) +
-                    "----------------------------------------------------\r\n" +
-                    "EXPECTED RETURN CHECKLIST:\r\n" +
-                    string.Join("\r\n", checklist.ConvertAll(c => "  - " + c));
+                    "======================================================\r\n" +
+                    "    LEONIDA CAMPUS  //  OFFICIAL BORROW SLIP ISSUED   \r\n" +
+                    "======================================================\r\n" +
+                    string.Format("SLIP ID     : {0}\r\n", slip.SlipID) +
+                    string.Format("BORROWER    : {0} ({1})\r\n", borrower.FullName, borrower.SchoolIDNumber) +
+                    string.Format("DEPARTMENT  : {0} ({1})\r\n", borrower.Department, borrower.Role) +
+                    string.Format("EQUIPMENT   : {0} [{1}]\r\n", item.ItemName, item.PropertyTag) +
+                    string.Format("ROOM / LAB  : {0}\r\n", slip.RoomToBeUsed) +
+                    string.Format("BORROWED AT : {0:yyyy-MM-dd HH:mm}\r\n", slip.TimeBorrowed) +
+                    string.Format("DUE TIME    : {0:yyyy-MM-dd HH:mm}\r\n", slip.DueTime) +
+                    "------------------------------------------------------\r\n" +
+                    "POLYMORPHIC RETURN CHECKLIST:\r\n" +
+                    string.Join("\r\n", checklist.ConvertAll(c => "  [ ] " + c)) +
+                    "\r\n======================================================";
 
                 RefreshAllViews();
                 SetStatus(string.Format("BorrowSlip {0} issued to {1}.", slip.SlipID, borrower.FullName), false);
+                _toastBanner.ShowBanner("SLIP ISSUED  //  DISPATCHED", string.Format("{0} checked out to {1}.", item.PropertyTag, borrower.FullName), GtaPalette.StatusClear);
             }
             catch (Exception ex)
             {
                 AudioHelper.PlayError();
                 SetStatus(string.Format("Borrowing Rejected: {0}", ex.Message), true);
+                _toastBanner.ShowBanner("DISPATCH BLOCKED", ex.Message, GtaPalette.StatusWanted);
                 MessageBox.Show(ex.Message, "Borrowing Rejected", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -232,7 +312,7 @@ namespace SchoolBorrowingSystem.UI
             if (string.IsNullOrEmpty(slipId))
             {
                 AudioHelper.PlayError();
-                MessageBox.Show("Please select an active borrow slip from the top table.", "No Slip Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _toastBanner.ShowBanner("NO SLIP SELECTED", "Select an active slip from the top table.", GtaPalette.StatusWanted);
                 return;
             }
 
@@ -248,17 +328,18 @@ namespace SchoolBorrowingSystem.UI
                 {
                     AudioHelper.PlayWarning();
                     SetStatus(string.Format("Return processed with penalty: PHP {0:N2}. Clearance hold applied!", penalty), true);
+                    _toastBanner.ShowBanner("PENALTY  //  CLEARANCE HOLD", string.Format("Slip {0}: PHP {1:N2} fine applied.", slipId, penalty), GtaPalette.StatusWanted);
                     MessageBox.Show(
-string.Format("Return processed for {0}.\n\nPENALTY INCURRED: PHP {1:N2}\nNotice: Borrower has been placed on CLEARANCE HOLD.", slipId, penalty),
-"Penalty & Clearance Hold",
-MessageBoxButtons.OK,
-MessageBoxIcon.Warning);
+                        string.Format("Return processed for {0}.\n\nPENALTY INCURRED: PHP {1:N2}\nNotice: Borrower has been placed on CLEARANCE HOLD.", slipId, penalty),
+                        "Penalty & Clearance Hold",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
                 }
                 else
                 {
                     AudioHelper.PlaySuccess();
                     SetStatus(string.Format("Slip {0} returned in good standing with PHP 0.00 penalty.", slipId), false);
-                    MessageBox.Show(string.Format("Slip {0} returned in good standing with no penalty!", slipId), "Return Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    _toastBanner.ShowBanner("RETURN COMPLETE", string.Format("Slip {0} cleared with PHP 0.00 penalty.", slipId), GtaPalette.StatusClear);
                 }
             }
             catch (Exception ex)
@@ -267,15 +348,17 @@ MessageBoxIcon.Warning);
                 MessageBox.Show(ex.Message, "Return Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
         private void ToggleSelectedBorrowerHold(bool applyHold)
         {
             string id = GetSelectedFirstCell(_dgvBorrowers);
             if (string.IsNullOrEmpty(id))
             {
                 AudioHelper.PlayError();
-                MessageBox.Show("Please select a borrower first.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _toastBanner.ShowBanner("NO BORROWER SELECTED", "Select a borrower row first.", GtaPalette.StatusWanted);
                 return;
             }
+
             SchoolBorrower borrower = null;
             foreach (var b in _borrowers)
             {
@@ -286,20 +369,24 @@ MessageBoxIcon.Warning);
                 }
             }
             if (borrower == null) return;
+
             if (applyHold)
             {
                 _borrowingController.ApplyClearanceHold(borrower);
                 AudioHelper.PlayWarning();
                 SetStatus(string.Format("Clearance hold applied to {0}.", borrower.FullName), true);
+                _toastBanner.ShowBanner("★★★ CLEARANCE HOLD APPLIED", borrower.FullName + " is now locked from borrowing.", GtaPalette.StatusWanted);
             }
             else
             {
                 _borrowingController.LiftClearanceHold(borrower);
                 AudioHelper.PlaySuccess();
                 SetStatus(string.Format("Clearance hold lifted for {0}.", borrower.FullName), false);
+                _toastBanner.ShowBanner("CLEARANCE RESTORED", borrower.FullName + " is back in good standing.", GtaPalette.StatusClear);
             }
             RefreshAllViews();
         }
+
         private void BtnRunQa_Click(object sender, EventArgs e)
         {
             AudioHelper.PlayMenuClick();
@@ -313,12 +400,18 @@ MessageBoxIcon.Warning);
                 if (passed)
                 {
                     AudioHelper.PlayTestVictory();
+                    _lblQaBadge.Text = "MISSION PASSED  //  44 / 44 ASSERTIONS VERIFIED";
+                    _lblQaBadge.ForeColor = GtaPalette.StatusClear;
                     SetStatus("All 44 Automated QA Unit & Integration Tests PASSED!", false);
+                    _toastBanner.ShowBanner("ALL 44 QA TESTS PASSED", "OOP encapsulation, inheritance & rules verified.", GtaPalette.ViceMagenta);
                 }
                 else
                 {
                     AudioHelper.PlayError();
+                    _lblQaBadge.Text = "QA FAILURE DETECTED  //  INSPECT CONSOLE";
+                    _lblQaBadge.ForeColor = GtaPalette.StatusWanted;
                     SetStatus("Some QA tests failed. Check output.", true);
+                    _toastBanner.ShowBanner("QA TESTS FAILED", "Review console log for failed assertions.", GtaPalette.StatusWanted);
                 }
             }
             finally
@@ -326,6 +419,7 @@ MessageBoxIcon.Warning);
                 Console.SetOut(originalOut);
             }
         }
+
         private void RefreshAllViews()
         {
             if (_equipmentController == null || _borrowingController == null || _borrowers == null) return;
@@ -333,6 +427,32 @@ MessageBoxIcon.Warning);
             RefreshBorrowDropdowns();
             RefreshSlipsGrids();
             RefreshBorrowersGrid();
+            UpdateHudTelemetry();
+        }
+
+        private void UpdateHudTelemetry()
+        {
+            int availableCount = 0;
+            int unavailableCount = 0;
+            foreach (var eq in _equipmentController.GetAllEquipment())
+            {
+                if (eq.IsAvailable) availableCount++;
+                else unavailableCount++;
+            }
+
+            int activeSlipCount = 0;
+            foreach (var _ in _borrowingController.GetActiveSlips()) activeSlipCount++;
+
+            int holdCount = 0;
+            foreach (var b in _borrowers)
+            {
+                if (b.HasClearanceHold) holdCount++;
+            }
+
+            hudAvailable.ValueText = availableCount.ToString();
+            hudActiveSlips.ValueText = activeSlipCount.ToString();
+            hudInRepair.ValueText = unavailableCount.ToString();
+            hudHolds.ValueText = holdCount.ToString();
         }
 
         private void RefreshEquipmentGrid()
@@ -340,51 +460,50 @@ MessageBoxIcon.Warning);
             RefreshEquipmentGrid(_dgvEquipment);
         }
 
-        private void RefreshEquipmentGrid(DataGridView _dgvEquipment)
+        private void RefreshEquipmentGrid(DataGridView dgv)
         {
-            _dgvEquipment.Rows.Clear();
+            if (_equipmentController == null) return;
+
+            dgv.Rows.Clear();
+            string query = _txtSearchEquipment != null ? _txtSearchEquipment.Text.Trim() : string.Empty;
+
             var items = _chkAvailableOnly.Checked
-            ? _equipmentController.GetAvailableEquipment()
-            : _equipmentController.GetAllEquipment();
+                ? _equipmentController.GetAvailableEquipment()
+                : _equipmentController.GetAllEquipment();
+
             foreach (var eq in items)
             {
-                int rowIdx = _dgvEquipment.Rows.Add(
-                eq.PropertyTag,
-                eq is AVEquipment ? "AV Equipment" : "Lab Equipment",
-                eq.ItemName,
-                eq.Condition,
-                eq.IsAvailable ? "AVAILABLE" : "UNAVAILABLE",
-                eq.ToString()
-                );
-                int r = 0;
-                foreach (DataGridViewRow row in _dgvEquipment.Rows)
+                string category = eq is AVEquipment ? "AV Equipment" : "Lab Equipment";
+                if (!string.IsNullOrEmpty(query))
                 {
-                    if (r == rowIdx)
-                    {
-                        int c = 0;
-                        foreach (DataGridViewCell cell in row.Cells)
-                        {
-                            if (c == 4)
-                            {
-                                cell.Style.ForeColor = eq.IsAvailable ? Color.FromArgb(27, 94, 32) : Color.FromArgb(183, 28, 28);
-                                cell.Style.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-                            }
-                            c++;
-                        }
-                    }
-                    r++;
+                    bool match = eq.PropertyTag.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 eq.ItemName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 category.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 eq.Condition.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (!match) continue;
                 }
+
+                dgv.Rows.Add(
+                    eq.PropertyTag,
+                    category,
+                    eq.ItemName,
+                    eq.Condition,
+                    eq.IsAvailable ? "AVAILABLE" : "UNAVAILABLE",
+                    eq.ToString()
+                );
             }
         }
+
         private void RefreshBorrowDropdowns()
         {
             _cmbBorrowers.Items.Clear();
             foreach (var b in _borrowers)
             {
-                string holdTag = b.HasClearanceHold ? " (HOLD)" : " (CLEAR)";
+                string holdTag = b.HasClearanceHold ? " (★ HOLD)" : " (CLEAR)";
                 _cmbBorrowers.Items.Add(string.Format("{0} - {1} ({2}){3}", b.SchoolIDNumber, b.FullName, b.Role, holdTag));
             }
             if (_cmbBorrowers.Items.Count > 0) _cmbBorrowers.SelectedIndex = 0;
+
             _cmbAvailableEquipment.Items.Clear();
             var available = _equipmentController.GetAvailableEquipment();
             foreach (var eq in available)
@@ -394,6 +513,7 @@ MessageBoxIcon.Warning);
             if (_cmbAvailableEquipment.Items.Count > 0) _cmbAvailableEquipment.SelectedIndex = 0;
             else _lstChecklistPreview.Items.Clear();
         }
+
         private void UpdateChecklistPreview()
         {
             _lstChecklistPreview.Items.Clear();
@@ -403,76 +523,74 @@ MessageBoxIcon.Warning);
             {
                 foreach (var item in selectedItem.GetReturnChecklist())
                 {
-                    _lstChecklistPreview.Items.Add("• " + item);
+                    _lstChecklistPreview.Items.Add("▸  " + item);
                 }
             }
         }
+
         private void RefreshSlipsGrids()
         {
             _dgvActiveSlips.Rows.Clear();
             foreach (var slip in _borrowingController.GetActiveSlips())
             {
                 _dgvActiveSlips.Rows.Add(
-                slip.SlipID,
-                slip.Borrower != null ? slip.Borrower.FullName : "Unknown",
-                slip.Equipment != null ? slip.Equipment.PropertyTag : "",
-                slip.Equipment != null ? slip.Equipment.ItemName : "Unknown",
-                slip.RoomToBeUsed,
-                slip.DueTime.ToString("yyyy-MM-dd HH:mm"),
-                slip.IsOverdue() ? "OVERDUE" : "ACTIVE"
+                    slip.SlipID,
+                    slip.Borrower != null ? slip.Borrower.FullName : "Unknown",
+                    slip.Equipment != null ? slip.Equipment.PropertyTag : "",
+                    slip.Equipment != null ? slip.Equipment.ItemName : "Unknown",
+                    slip.RoomToBeUsed,
+                    slip.DueTime.ToString("yyyy-MM-dd HH:mm"),
+                    slip.IsOverdue() ? "OVERDUE" : "ACTIVE"
                 );
             }
+
             _dgvHistoricalSlips.Rows.Clear();
             foreach (var slip in _borrowingController.GetHistoricalSlips())
             {
                 _dgvHistoricalSlips.Rows.Add(
-                slip.SlipID,
-                slip.Borrower != null ? slip.Borrower.FullName : "Unknown",
-                slip.Equipment != null ? slip.Equipment.ItemName : "Unknown",
-                slip.TimeReturned.HasValue ? slip.TimeReturned.Value.ToString("yyyy-MM-dd HH:mm") : "-",
-                slip.ToString()
+                    slip.SlipID,
+                    slip.Borrower != null ? slip.Borrower.FullName : "Unknown",
+                    slip.Equipment != null ? slip.Equipment.ItemName : "Unknown",
+                    slip.TimeReturned.HasValue ? slip.TimeReturned.Value.ToString("yyyy-MM-dd HH:mm") : "-",
+                    slip.ToString()
                 );
-            }
-        }
-        private void RefreshBorrowersGrid()
-        {
-            _dgvBorrowers.Rows.Clear();
-            foreach (var b in _borrowers)
-            {
-                int rowIdx = _dgvBorrowers.Rows.Add(
-                b.SchoolIDNumber,
-                b.FullName,
-                b.Role,
-                b.Department,
-                b.HasClearanceHold ? "ACTIVE (HOLD)" : "CLEAR"
-                );
-                int r = 0;
-                foreach (DataGridViewRow row in _dgvBorrowers.Rows)
-                {
-                    if (r == rowIdx)
-                    {
-                        int c = 0;
-                        foreach (DataGridViewCell cell in row.Cells)
-                        {
-                            if (c == 4)
-                            {
-                                cell.Style.ForeColor = b.HasClearanceHold ? Color.FromArgb(183, 28, 28) : Color.FromArgb(27, 94, 32);
-                                cell.Style.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-                            }
-                            c++;
-                        }
-                    }
-                    r++;
-                }
             }
         }
 
+        private void RefreshBorrowersGrid()
+        {
+            if (_borrowers == null) return;
+
+            _dgvBorrowers.Rows.Clear();
+            string query = _txtSearchBorrowers != null ? _txtSearchBorrowers.Text.Trim() : string.Empty;
+
+            foreach (var b in _borrowers)
+            {
+                if (!string.IsNullOrEmpty(query))
+                {
+                    bool match = b.SchoolIDNumber.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 b.FullName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 b.Department.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 b.Role.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (!match) continue;
+                }
+
+                _dgvBorrowers.Rows.Add(
+                    b.SchoolIDNumber,
+                    b.FullName,
+                    b.Role,
+                    b.Department,
+                    b.HasClearanceHold ? "★★★ ACTIVE (HOLD)" : "✓ CLEAR"
+                );
+            }
+        }
 
         private void SetStatus(string text, bool isAlert)
         {
-            _lblStatusBanner.Text = text;
-            _lblStatusBanner.ForeColor = isAlert ? Color.FromArgb(183, 28, 28) : Color.FromArgb(27, 94, 32);
+            _lblStatusBanner.Text = (isAlert ? "ALERT  //  " : "STATUS  //  ") + text.ToUpperInvariant();
+            _lblStatusBanner.ForeColor = isAlert ? GtaPalette.StatusWanted : GtaPalette.ViceTeal;
         }
+
         private void OpenBorrowDialog()
         {
             AudioHelper.PlayMenuClick();
@@ -508,6 +626,7 @@ MessageBoxIcon.Warning);
                 {
                     RefreshAllViews();
                     SetStatus("New equipment registered in inventory.", false);
+                    _toastBanner.ShowBanner("NEW GEAR REGISTERED", "Inventory catalog and HUD updated.", GtaPalette.StatusClear);
                 }
             }
         }
