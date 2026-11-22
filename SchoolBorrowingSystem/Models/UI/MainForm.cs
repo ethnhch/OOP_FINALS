@@ -126,6 +126,155 @@ namespace SchoolBorrowingSystem.UI
             OpenAddEquipmentDialog();
         }
 
+        private void DgvEquipment_SelectionChanged(object sender, EventArgs e)
+        {
+            UpdateSelectedAssetDossier();
+        }
+
+        private void DgvBorrowers_SelectionChanged(object sender, EventArgs e)
+        {
+            UpdateSelectedBorrowerProfile();
+        }
+
+        private void UpdateSelectedAssetDossier()
+        {
+            if (_equipmentController == null) return;
+
+            string tag = GetSelectedFirstCell(_dgvEquipment);
+            if (string.IsNullOrEmpty(tag))
+            {
+                _assetDossier.SetAsset(null, null, null, null, false, true, null);
+                return;
+            }
+
+            var eq = _equipmentController.FindEquipmentByTag(tag);
+            if (eq == null)
+            {
+                _assetDossier.SetAsset(null, null, null, null, false, true, null);
+                return;
+            }
+
+            bool isAv = eq is AVEquipment;
+            _assetDossier.SetAsset(
+                eq.PropertyTag,
+                eq.ItemName,
+                isAv ? "AV Equipment" : "Lab Equipment",
+                eq.Condition,
+                eq.IsAvailable,
+                isAv,
+                eq.GetReturnChecklist());
+
+            cardInvDossier.AccentColor = eq.IsAvailable ? (isAv ? GtaPalette.ViceTeal : GtaPalette.ViceMagenta) : GtaPalette.StatusWanted;
+            btnQuickDispatch.AccentColor = eq.IsAvailable ? GtaPalette.StatusClear : GtaPalette.BorderSubtle;
+        }
+
+        private void UpdateSelectedBorrowerProfile()
+        {
+            if (_borrowers == null || _borrowingController == null) return;
+
+            string id = GetSelectedFirstCell(_dgvBorrowers);
+            if (string.IsNullOrEmpty(id))
+            {
+                _borrowerProfile.SetBorrower(null, null, null, null, false, 0);
+                return;
+            }
+
+            SchoolBorrower found = null;
+            foreach (var b in _borrowers)
+            {
+                if (string.Equals(b.SchoolIDNumber, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    found = b;
+                    break;
+                }
+            }
+
+            if (found == null) return;
+
+            int activeCount = 0;
+            foreach (var slip in _borrowingController.GetActiveSlips())
+            {
+                if (slip.Borrower != null && string.Equals(slip.Borrower.SchoolIDNumber, found.SchoolIDNumber, StringComparison.OrdinalIgnoreCase))
+                    activeCount++;
+            }
+
+            _borrowerProfile.SetBorrower(found.SchoolIDNumber, found.FullName, found.Role, found.Department, found.HasClearanceHold, activeCount);
+            cardBorProfile.AccentColor = found.HasClearanceHold ? GtaPalette.StatusWanted : GtaPalette.StatusClear;
+        }
+
+        private void BtnQuickDispatch_Click(object sender, EventArgs e)
+        {
+            string tag = GetSelectedFirstCell(_dgvEquipment);
+            if (string.IsNullOrEmpty(tag))
+            {
+                AudioHelper.PlayError();
+                _toastBanner.ShowBanner("NO ASSET SELECTED", "Select an available equipment row first.", GtaPalette.StatusWanted);
+                return;
+            }
+
+            var eq = _equipmentController.FindEquipmentByTag(tag);
+            if (eq == null || !eq.IsAvailable)
+            {
+                AudioHelper.PlayWarning();
+                _toastBanner.ShowBanner("UNIT UNAVAILABLE", tag + " is currently checked out or under repair.", GtaPalette.StatusWanted);
+                return;
+            }
+
+            SwitchTab(1);
+            for (int i = 0; i < _cmbAvailableEquipment.Items.Count; i++)
+            {
+                if (_cmbAvailableEquipment.Items[i].ToString().StartsWith(tag + " ", StringComparison.OrdinalIgnoreCase))
+                {
+                    _cmbAvailableEquipment.SelectedIndex = i;
+                    break;
+                }
+            }
+            _toastBanner.ShowBanner("DISPATCH LOADED", tag + " pre-selected in Borrow Request.", GtaPalette.ViceTeal);
+        }
+
+        private void CmbBorrowers_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_borrowers == null || _cmbBorrowers.SelectedIndex < 0) return;
+
+            var b = GetBorrowerAt(_borrowers, _cmbBorrowers.SelectedIndex);
+            if (b == null) return;
+
+            if (b.HasClearanceHold)
+            {
+                _lblBorrowClearance.Text = string.Format("★★★ ACTIVE CLEARANCE HOLD  //  {0} • DISPATCH LOCKED", b.Department.ToUpperInvariant());
+                _lblBorrowClearance.ForeColor = GtaPalette.StatusWanted;
+                grpRequest.AccentColor = GtaPalette.StatusWanted;
+                btnIssueSlip.AccentColor = GtaPalette.StatusWanted;
+            }
+            else
+            {
+                _lblBorrowClearance.Text = string.Format("✓ CLEARANCE VERIFIED  //  {0} • {1}", b.Department.ToUpperInvariant(), b.Role.ToUpperInvariant());
+                _lblBorrowClearance.ForeColor = GtaPalette.StatusClear;
+                grpRequest.AccentColor = GtaPalette.ViceMagenta;
+                btnIssueSlip.AccentColor = GtaPalette.StatusClear;
+            }
+        }
+
+        private void BtnRoomPreset_Click(object sender, EventArgs e)
+        {
+            AudioHelper.PlayMenuClick();
+            if (sender == btnRoomPreset1) _txtRoom.Text = "Room 304 - Lecture Hall";
+            else if (sender == btnRoomPreset2) _txtRoom.Text = "Science Lab 201";
+            else if (sender == btnRoomPreset3) _txtRoom.Text = "AVR Auditorium";
+        }
+
+        private void BtnCopyReceipt_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_txtBorrowReceipt.Text)) return;
+            try
+            {
+                Clipboard.SetText(_txtBorrowReceipt.Text);
+                AudioHelper.PlayMenuClick();
+                _toastBanner.ShowBanner("RECEIPT COPIED", "Official slip text copied to clipboard.", GtaPalette.SunsetPeach);
+            }
+            catch { }
+        }
+
         private void CmbAvailableEquipment_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateChecklistPreview();
@@ -400,16 +549,18 @@ namespace SchoolBorrowingSystem.UI
                 if (passed)
                 {
                     AudioHelper.PlayTestVictory();
-                    _lblQaBadge.Text = "MISSION PASSED  //  44 / 44 ASSERTIONS VERIFIED";
-                    _lblQaBadge.ForeColor = GtaPalette.StatusClear;
+                    _qaMeter.Percent = 100;
+                    _qaMeter.AccentColor = GtaPalette.StatusClear;
+                    _qaMeter.StatusText = "MISSION PASSED  //  44 / 44 OOP ASSERTIONS VERIFIED (100%)";
                     SetStatus("All 44 Automated QA Unit & Integration Tests PASSED!", false);
                     _toastBanner.ShowBanner("ALL 44 QA TESTS PASSED", "OOP encapsulation, inheritance & rules verified.", GtaPalette.ViceMagenta);
                 }
                 else
                 {
                     AudioHelper.PlayError();
-                    _lblQaBadge.Text = "QA FAILURE DETECTED  //  INSPECT CONSOLE";
-                    _lblQaBadge.ForeColor = GtaPalette.StatusWanted;
+                    _qaMeter.Percent = 45;
+                    _qaMeter.AccentColor = GtaPalette.StatusWanted;
+                    _qaMeter.StatusText = "QA FAILURE DETECTED  //  INSPECT ASSERTION CONSOLE";
                     SetStatus("Some QA tests failed. Check output.", true);
                     _toastBanner.ShowBanner("QA TESTS FAILED", "Review console log for failed assertions.", GtaPalette.StatusWanted);
                 }
@@ -428,14 +579,18 @@ namespace SchoolBorrowingSystem.UI
             RefreshSlipsGrids();
             RefreshBorrowersGrid();
             UpdateHudTelemetry();
+            UpdateSelectedAssetDossier();
+            UpdateSelectedBorrowerProfile();
         }
 
         private void UpdateHudTelemetry()
         {
+            int totalGear = 0;
             int availableCount = 0;
             int unavailableCount = 0;
             foreach (var eq in _equipmentController.GetAllEquipment())
             {
+                totalGear++;
                 if (eq.IsAvailable) availableCount++;
                 else unavailableCount++;
             }
@@ -443,29 +598,36 @@ namespace SchoolBorrowingSystem.UI
             int activeSlipCount = 0;
             foreach (var _ in _borrowingController.GetActiveSlips()) activeSlipCount++;
 
+            int totalBorrowers = 0;
             int holdCount = 0;
             foreach (var b in _borrowers)
             {
+                totalBorrowers++;
                 if (b.HasClearanceHold) holdCount++;
             }
 
+            int gearDiv = Math.Max(1, totalGear);
+            int borDiv = Math.Max(1, totalBorrowers);
+
             hudAvailable.ValueText = availableCount.ToString();
+            hudAvailable.FillPercent = (availableCount * 100) / gearDiv;
+
             hudActiveSlips.ValueText = activeSlipCount.ToString();
+            hudActiveSlips.FillPercent = activeSlipCount == 0 ? 4 : Math.Min(100, (activeSlipCount * 100) / gearDiv);
+
             hudInRepair.ValueText = unavailableCount.ToString();
+            hudInRepair.FillPercent = unavailableCount == 0 ? 4 : (unavailableCount * 100) / gearDiv;
+
             hudHolds.ValueText = holdCount.ToString();
+            hudHolds.FillPercent = holdCount == 0 ? 4 : (holdCount * 100) / borDiv;
         }
 
         private void RefreshEquipmentGrid()
         {
-            RefreshEquipmentGrid(_dgvEquipment);
-        }
-
-        private void RefreshEquipmentGrid(DataGridView dgv)
-        {
             if (_equipmentController == null) return;
 
-            dgv.Rows.Clear();
-            string query = _txtSearchEquipment != null ? _txtSearchEquipment.Text.Trim() : string.Empty;
+            _dgvEquipment.Rows.Clear();
+            string query = _txtSearchEquipment != null ? _txtSearchEquipment.SearchText.Trim() : string.Empty;
 
             var items = _chkAvailableOnly.Checked
                 ? _equipmentController.GetAvailableEquipment()
@@ -483,7 +645,7 @@ namespace SchoolBorrowingSystem.UI
                     if (!match) continue;
                 }
 
-                dgv.Rows.Add(
+                _dgvEquipment.Rows.Add(
                     eq.PropertyTag,
                     category,
                     eq.ItemName,
@@ -492,6 +654,8 @@ namespace SchoolBorrowingSystem.UI
                     eq.ToString()
                 );
             }
+
+            UpdateSelectedAssetDossier();
         }
 
         private void RefreshBorrowDropdowns()
@@ -562,7 +726,7 @@ namespace SchoolBorrowingSystem.UI
             if (_borrowers == null) return;
 
             _dgvBorrowers.Rows.Clear();
-            string query = _txtSearchBorrowers != null ? _txtSearchBorrowers.Text.Trim() : string.Empty;
+            string query = _txtSearchBorrowers != null ? _txtSearchBorrowers.SearchText.Trim() : string.Empty;
 
             foreach (var b in _borrowers)
             {
@@ -580,9 +744,11 @@ namespace SchoolBorrowingSystem.UI
                     b.FullName,
                     b.Role,
                     b.Department,
-                    b.HasClearanceHold ? "★★★ ACTIVE (HOLD)" : "✓ CLEAR"
+                    b.HasClearanceHold ? "★★★ HOLD" : "✓ CLEAR"
                 );
             }
+
+            UpdateSelectedBorrowerProfile();
         }
 
         private void SetStatus(string text, bool isAlert)
