@@ -1,270 +1,101 @@
-# Quality Assurance (QA) Report: School Equipment Borrowing System
-
-**Document Version:** 1.0.0  
-**Target Environment:** Visual Studio 2019 / 2022 (C# / .NET)  
-**System Name:** School Equipment Borrowing Management System  
-**Evaluation Standard:** Object-Oriented Programming (OOP) Principles & UML Diagram Fidelity  
-**Date of Audit:** November 21, 2026  
-**Status:** **APPROVED & FULLY COMPLIANT** (44/44 Tests Passed - 100% Pass Rate)
+# Quality Assurance (QA) Comprehensive System Audit Report
+**System:** School Equipment Borrowing Management System  
+**Target Platform:** Microsoft Visual Studio 2019 / 2022 (C# / .NET 8 Windows Forms)  
+**Document Version:** 2.0.0  
+**Audit Date:** November 23, 2026  
+**Auditor:** Quality Assurance & Senior Backend Engineering Review  
+**Initial Assessment Status:** ⚠️ **CRITICAL ISSUES IDENTIFIED - REMEDIATION REQUIRED**
 
 ---
 
 ## 1. Executive Summary
 
-This Quality Assurance Report provides an exhaustive technical audit of the **School Equipment Borrowing System**, developed in strict accordance with the provided Unified Modeling Language (UML) class diagram and enterprise-grade Object-Oriented Programming standards.
+A comprehensive architectural, logic, and operational audit was conducted on the **School Equipment Borrowing Management System**. The system is a Windows Forms desktop application designed for managing school equipment loans (AV and Laboratory equipment), tracking borrowers (students, faculty, staff), processing checkout slips, handling returns, and managing administrative clearance holds.
 
-The software has been engineered specifically for direct compilation, debugging, and execution within **Microsoft Visual Studio**, featuring a clean solution architecture (`SchoolBorrowingSystem.sln`), modular directory organization (`Models/`, `Controllers/`, `Transactions/`), and zero spaghetti code.
+While the codebase features a stylized GTA 6-inspired user interface and foundational OOP abstractions (`SchoolEquipment`, `AVEquipment`, `LabEquipment`), the previous QA Report (v1.0.0) claimed a "100% compliant / production ready" status based on 44 isolated unit assertions. This initial assessment was **falsely clean** and obscured critical operational, data persistence, and state synchronization defects.
 
-All requirements—including polymorphic equipment behaviors, dynamic return checklist verification, loan duration rules, fine calculations, inventory persistence, repair state transitions, and administrative clearance hold enforcement—have been implemented and verified via automated test scenarios.
+The system currently operates as a partial **CRU (Create, Read, Update)** model rather than a complete **CRUD (Create, Read, Update, Delete)** architecture, lacks database wiring, exhibits state desynchronization upon inventory reloads and unit restoration, and contains hardcoded domain logic.
 
 ---
 
-## 2. UML Structural Analysis & Implementation Traceability
+## 2. Comprehensive Subsystem Audit Matrix
 
-The system faithfully implements every class, attribute, method, and association depicted in the UML diagram. Below is the structural traceability matrix:
-
-| UML Class | Specified Member / Relationship | Visibility & Type | C# Implementation Status | Verification Details |
+| Subsystem / Layer | Component / File | Functional Intent | Current State / Defects Found | Severity |
 | :--- | :--- | :--- | :--- | :--- |
-| **`SchoolBorrower`** | `SchoolIDNumber` | `+ string` | Implemented | Auto-property with validation against null/empty strings. |
-| | `FullName` | `+ string` | Implemented | Auto-property with parameterized constructor support. |
-| | `Role` | `+ string` | Implemented | Auto-property (e.g., Student, Faculty, Staff). |
-| | `Department` | `+ string` | Implemented | Academic department identifier. |
-| | `HasClearanceHold` | `+ bool` | Implemented | Tracks whether administrative hold blocks borrowing. |
-| | `CheckEligibility()` | `+ bool` | Implemented | Returns `true` only if `!HasClearanceHold` and ID is valid. |
-| **`SchoolEquipment`** *(Abstract)* | `_propertyTag` | `- string` | Implemented | Encapsulated private backing field. |
-| | `_itemName` | `- string` | Implemented | Encapsulated private backing field. |
-| | `_condition` | `- string` | Implemented | Encapsulated private backing field. |
-| | `_isAvailable` | `- bool` | Implemented | Encapsulated private backing field. |
-| | `PropertyTag` | `+ string` | Implemented | Public property with getter and setter accessing `_propertyTag`. |
-| | `ItemName` | `+ string` | Implemented | Public property with getter and setter accessing `_itemName`. |
-| | `Condition` | `+ string` | Implemented | Public property with getter and setter accessing `_condition`. |
-| | `IsAvailable` | `+ bool` | Implemented | Public property with getter and setter accessing `_isAvailable`. |
-| | `GetBorrowDurationDays()` | `+ * int` (Abstract) | Implemented | Abstract contract method enforced on all derived types. |
-| | `GetReturnChecklist()` | `+ * List<string>` (Abstract) | Implemented | Abstract contract returning required inspection checklist items. |
-| **`AVEquipment`** *(inherits `SchoolEquipment`)* | `IncludesRemote` | `+ bool` | Implemented | Tracks presence of wireless remote control. |
-| | `IncludesPowerCord` | `+ bool` | Implemented | Tracks presence of AC power adapter. |
-| | `IncludesHDMI` | `+ bool` | Implemented | Tracks presence of display / HDMI cable. |
-| | `GetBorrowDurationHours()` | `+ int` | Implemented | Returns hourly loan duration (default: 4 hours). |
-| | `GetBorrowDurationDays()` | `+ override int` | Implemented | Overrides base contract (returns 0 for same-day loan). |
-| | `GetReturnChecklist()` | `+ override List<string>`| Implemented | Polymorphic checklist dynamically including present peripherals. |
-| **`LabEquipment`** *(inherits `SchoolEquipment`)* | `CalibrationDate` | `+ DateTime` | Implemented | Tracks formal calibration inspection timestamp. |
-| | `ComponentCount` | `+ int` | Implemented | Tracks number of discrete apparatus components / accessories. |
-| | `GetBorrowDurationDays()` | `+ override int` | Implemented | Overrides base contract (returns multi-day window, default 7). |
-| | `GetReturnChecklist()` | `+ override List<string>`| Implemented | Polymorphic checklist validating components, calibration, residue. |
-| **`BorrowSlip`** | `SlipID` | `+ string` | Implemented | Unique transaction receipt identifier (e.g., `SLIP-1001`). |
-| | `Borrower` | `+ SchoolBorrower` | Implemented | Associated borrower reference. |
-| | `Equipment` | `+ SchoolEquipment` | Implemented | Associated equipment reference (polymorphic base pointer). |
-| | `RoomToBeUsed` | `+ string` | Implemented | Classroom or lab where equipment is stationed. |
-| | `TimeBorrowed` | `+ DateTime` | Implemented | Loan checkout timestamp. |
-| | `DueTime` | `+ DateTime` | Implemented | Computed due timestamp based on equipment borrow duration. |
-| | `TimeReturned` | `+ DateTime?` | Implemented | Nullable timestamp populated upon return. |
-| | `ReleasedByStaff` | `+ string` | Implemented | Name/ID of authorizing equipment desk staff. |
-| | `IsOverdue()` | `+ bool` | Implemented | Evaluates if return timestamp or current time exceeds `DueTime`. |
-| **`EquipmentController`** | `_inventory` | `- List<SchoolEquipment>`| Implemented | Encapsulated inventory list storing polymorphic equipment. |
-| | `AddEquipment(item)` | `+ void` | Implemented | Adds equipment, enforces non-null and unique `PropertyTag`. |
-| | `GetAvailableEquipment()`| `+ List<SchoolEquipment>`| Implemented | Filters and returns list of items with `IsAvailable == true`. |
-| | `MarkForRepair(propertyTag)`| `+ void` | Implemented | Sets condition to `"Under Repair"` and `IsAvailable = false`. |
-| | `SaveInventory()` | `+ void` | Implemented | Persists full inventory state and metadata to storage file. |
-| **`BorrowingController`**| `_activeSlips` | `- List<BorrowSlip>` | Implemented | Encapsulated collection of ongoing loan slips. |
-| | `ProcessBorrow(...)` | `+ BorrowSlip` | Implemented | Validates eligibility & availability, computes due time, marks borrowed. |
-| | `ProcessReturn(...)` | `+ double` | Implemented | Evaluates overdue, damage, and checklist; computes fines; updates state. |
-| | `ApplyClearanceHold(...)`| `+ void` | Implemented | Administrative hold enforcement setting `HasClearanceHold = true`. |
+| **Data Persistence** | `ISchoolDataStore`, `SqlServerSchoolDataStore`, `InMemorySchoolDataStore` | Abstract persistence contract & SQL Server LocalDB implementation | **Disconnected:** Classes were created in commit `5336c4a` but are **never instantiated or injected** in `Program.cs`. Both controllers default to `_store = null`. Data is not persisted to `SchoolDB.mdf`. | **MAJOR** |
+| **Persistence / UI** | `MainForm.cs`, `EquipmentController.cs` | File save/load via text file | Flat-file I/O only saves equipment; borrowers and active/historical borrow slips are never written to disk. All loan transactions are lost on exit. | **MAJOR** |
+| **Inventory State Lifecycle** | `EquipmentController.CompleteRepair`, `MainForm.BtnCompleteRepair_Click` | Restore flagged units to service | **Logic Bug:** "Restore Unit" sets `item.IsAvailable = true` unconditionally without verifying if the item is currently checked out on an active borrow slip. Allows double-booking active equipment. | **MAJOR** |
+| **Memory Synchronization** | `EquipmentController.LoadInventory`, `BorrowingController.ProcessReturn` | Reload inventory from disk | **Reference Desynchronization:** `LoadInventory()` clears `_inventory` and creates new instances. Pre-existing `BorrowSlip` objects retain references to obsolete memory instances. Returns update the orphan instance, leaving inventory items permanently `Unavailable`. | **MAJOR** |
+| **Equipment CRUD** | `EquipmentController.cs`, `AddEquipmentForm.cs`, `MainForm.cs` | Inventory management | **No Update & No Delete:** Equipment cannot be edited (cannot modify PropertyTag, Name, Duration, or Accessories) and cannot be deleted. Inventory is append-only. | **MAJOR** |
+| **Borrower CRUD** | `MainForm.cs`, `SchoolBorrower.cs` | Borrower records & management | **No Add & No Edit:** Borrowers are hardcoded to 4 seed records in `Program.cs`. The UI provides no capability to register new borrowers or edit details (name, department, role). | **MAJOR** |
+| **Business Logic / Penalties** | `BorrowingController.ProcessReturn`, `MainForm.cs` | Return penalty calculation | Cash fee calculations (`PHP 50-300`) are present but conflict with academic requirements where non-financial clearance holds and repair ticketing govern school asset management. | **MAJOR** |
+| **Return State Logic** | `BorrowingController.ProcessReturn` | Missing parts / incomplete checklist return | When an item is returned with missing accessories, its condition remains recorded as `"Good"` while `IsAvailable` becomes `false`. Staff has no visual indication of missing parts except manual "Restore Unit". | **MINOR** |
+| **Service Layer Validation** | `EquipmentController.cs`, `BorrowingController.cs` | Input sanitization & invariant enforcement | `AddEquipment` accepts whitespace-only tags (`"   "`). `ProcessBorrow` does not verify whether the borrowed equipment exists within the controller's registered inventory. | **MINOR** |
+| **Equipment Configuration** | `AddEquipmentForm.cs` | Lab apparatus registration | Lab apparatus component count is hardcoded to `3` in `AddEquipmentForm.BtnAdd_Click` with no UI input control provided. | **MINOR** |
+| **Dead Code / UI Redundancy** | `BorrowForm.cs`, `ReturnForm.cs` | Modal dialog workflows | Standalone modal forms `BorrowForm` and `ReturnForm` are never shown. `MainForm` embeds equivalent tabs inline, leaving these files unused. | **MINOR** |
 
 ---
 
-## 3. Object-Oriented Principles Analysis
+## 3. Detailed Root Cause Analysis of Major Problems
 
-### 3.1. Encapsulation
-- **Data Hiding & Protection:** In `SchoolEquipment`, internal state variables (`_propertyTag`, `_itemName`, `_condition`, `_isAvailable`) are declared strictly as `private`. They can only be accessed through public property accessors with appropriate validation.
-- **Collection Protection:** In `EquipmentController` and `BorrowingController`, internal lists (`_inventory`, `_activeSlips`) are encapsulated. Query methods return copies or filtered subsets, preventing external classes from corrupting the internal state of the collections.
+### 3.1. Database Disconnection & Lack of Persistence
+- **Observation:** `SchoolDB.mdf` and `SqlServerSchoolDataStore.cs` exist in the repository. However, `Program.cs` line 44 initializes:
+  ```csharp
+  _equipmentController = new EquipmentController("school_inventory.txt");
+  _borrowingController = new BorrowingController(_equipmentController);
+  ```
+  The overload accepting `ISchoolDataStore` is bypassed.
+- **Root Cause:** Persistence was developed in isolation and not wired into the application bootstrap. Additionally, no fallback mechanism exists if SQL Server LocalDB instance `(LocalDB)\MSSQLLocalDB` is uninstalled or unreachable on client machines.
+- **Remediation Strategy:** Inject `ISchoolDataStore` into both controllers. Implement an automatic initialization routine with graceful multi-tier storage (SQL Server LocalDB primary with transparent structured file fallback), ensuring reliable persistence across all execution environments.
 
-### 3.2. Abstraction
-- **Abstract Base Contract:** `SchoolEquipment` defines an abstract contract. The system treats physical school assets uniformly through the abstract methods `GetBorrowDurationDays()` and `GetReturnChecklist()`.
-- **Hiding Implementation Complexity:** Callers interacting with `BorrowingController.ProcessBorrow` or `ProcessReturn` do not need to know the specific math of fine algorithms or peripheral checklist construction.
+### 3.2. "Restore Unit" Bug on Currently Borrowed Equipment
+- **Observation:** If an item is flagged "Under Repair" while actively checked out (e.g. reported damaged by field staff before physical check-in), clicking "Restore Unit" immediately marks `IsAvailable = true`.
+- **Root Cause:** `BtnCompleteRepair_Click` in `MainForm.cs` directly mutates `item.IsAvailable = true`, and `EquipmentController.CompleteRepair` lacks awareness of ongoing borrow slips.
+- **Remediation Strategy:** `CompleteRepair` must inspect `BorrowingController.GetActiveSlips()`. If an active slip exists for the property tag, condition is restored to `"Good"`, but `IsAvailable` remains `false` until the physical slip is returned.
 
-### 3.3. Inheritance
-- **Hierarchical Reusability:** `AVEquipment` and `LabEquipment` derive from `SchoolEquipment`. Common attributes (tags, condition, availability) and behavior are inherited directly from the base class, eliminating code duplication.
-- **Specialized Extension:** Subclasses introduce specialized domain attributes (`IncludesRemote`, `IncludesHDMI` for AV; `CalibrationDate`, `ComponentCount` for Lab) without polluting the base class.
+### 3.3. "Load Inventory" Breaking Returns
+- **Observation:** If a user borrows an item, clicks "Load Inventory", and later attempts to process a return, the item remains stuck as `UNAVAILABLE` in the inventory grid.
+- **Root Cause:** `EquipmentController.LoadInventory()` executes `_inventory.Clear()` and instantiates new equipment objects. The active `BorrowSlip.Equipment` reference points to the discarded object in heap memory. When `ProcessReturn` executes `slip.Equipment.IsAvailable = true`, it mutates the disconnected instance.
+- **Remediation Strategy:** When `ProcessReturn` or inventory lookup occurs, always resolve equipment against the live `EquipmentController` registry by `PropertyTag`. Furthermore, `LoadInventory` and `RestoreInventory` must preserve or rebind active references.
 
-### 3.4. Polymorphism
-- **Dynamic Runtime Dispatch:** In `BorrowSlip.cs` and `BorrowingController.cs`, equipment is referenced through the abstract base pointer `SchoolEquipment`. When `item.GetReturnChecklist()` is invoked, the CLR dispatches to the derived implementation at runtime:
-  - For `AVEquipment`: Generates a checklist containing HDMI cables, power cords, and remotes.
-  - For `LabEquipment`: Generates a checklist detailing discrete component counts, calibration validity, and decontamination.
-- **Polymorphic Duration Modeling:** The `ProcessBorrow` coordinator checks the concrete equipment type polymorphically to configure due timestamps either by hours (AV loan) or days (laboratory loan).
+### 3.4. Lack of Equipment Update and Delete (Full CRUD)
+- **Observation:** Inventory only allows adding items. If a property tag is mistyped, a name changes, or loan duration needs adjustment, there is no edit mechanism. Decommissioned or lost equipment cannot be deleted.
+- **Remediation Strategy:**
+  1. Add `UpdateEquipment(SchoolEquipment item)` in `EquipmentController` and `ISchoolDataStore`.
+  2. Add `DeleteEquipment(string propertyTag)` in `EquipmentController` and `ISchoolDataStore` with guard checks rejecting deletion if an active loan is outstanding.
+  3. Provide UI controls (Edit and Delete buttons, edit dialog) in `MainForm`.
 
-### 3.5. SOLID Principles Compliance
-1. **Single Responsibility Principle (SRP):**
-   - `SchoolBorrower`: Purely models borrower identity and eligibility.
-   - `SchoolEquipment` / subclasses: Model equipment properties and physical checklist requirements.
-   - `BorrowSlip`: Encapsulates transaction state and overdue evaluation.
-   - `EquipmentController`: Exclusively manages inventory lifecycle, availability, and persistence.
-   - `BorrowingController`: Exclusively coordinates borrowing workflows, returns, and penalty calculations.
-2. **Open/Closed Principle (OCP):**
-   - New equipment categories (e.g., `MusicalEquipment`, `SportsEquipment`, `ITLaptops`) can be added by simply subclassing `SchoolEquipment` without modifying any existing controller logic.
-3. **Liskov Substitution Principle (LSP):**
-   - Any derived equipment (`AVEquipment`, `LabEquipment`) can be passed wherever `SchoolEquipment` is accepted without breaking system invariants or requiring type-specific workarounds.
-4. **Interface Segregation & Loose Coupling:**
-   - Classes communicate through clean method signatures with explicit parameters and return values, preventing tight coupling.
-5. **Dependency Inversion Principle (DIP):**
-   - `BorrowingController` receives `EquipmentController` via constructor injection, enabling dependency management and testability.
+### 3.5. Lack of Borrower Management (Add & Edit)
+- **Observation:** The borrower roster cannot be expanded or edited in the UI.
+- **Remediation Strategy:**
+  1. Implement `BorrowerForm` for adding and editing borrowers (ID, Full Name, Role, Department).
+  2. Expose Add and Edit buttons on the "Borrowers & Holds" tab in `MainForm`.
+  3. Ensure all borrower changes persist immediately to the data store.
 
----
+### 3.6. Falsely Clean Automated QA Report
+- **Observation:** Previous test suite in `TestRunner.cs` passed 44 assertions by testing only "happy path" synthetic scenarios and never evaluating real-world interactions (such as repairing borrowed gear or reloading inventory).
+- **Remediation Strategy:** Expand `TestRunner.cs` to test the new CRUD methods, boundary validations, persistence roundtrips, and regression scenarios for the discovered bugs.
 
-## 4. Test Strategy, Test Matrix & Results
-
-### 4.1. Test Traceability Matrix
-
-| Test ID | Test Scenario | OOP / Logic Principle Tested | Expected Outcome | Actual Result |
-| :--- | :--- | :--- | :--- | :--- |
-| **TC-01** | Polymorphic AV Checklist | Polymorphism & Dynamic Dispatch | Checklist contains HDMI, remote, power cord | **PASS** |
-| **TC-02** | Polymorphic Lab Checklist | Polymorphism & Dynamic Dispatch | Checklist contains calibration seal, 4 components | **PASS** |
-| **TC-03** | Eligible Borrower Check | Encapsulation & Domain Rules | `CheckEligibility()` returns `true` | **PASS** |
-| **TC-04** | Clearance Hold Borrower | Encapsulation & Domain Rules | `CheckEligibility()` returns `false` | **PASS** |
-| **TC-05** | Empty Student ID Borrower | Defensive Programming | `CheckEligibility()` returns `false` | **PASS** |
-| **TC-06** | Inventory Tracking | Encapsulation & Inventory Logic | All registered equipment tracked in inventory | **PASS** |
-| **TC-07** | Availability Filtering | Query & State Filtering | Only available equipment returned | **PASS** |
-| **TC-08** | Mark Equipment For Repair | State Transition & Status Coordination | Condition set to "Under Repair", IsAvailable = false | **PASS** |
-| **TC-09** | Duplicate Tag Prevention | Inventory Invariant Enforcement | Throws `InvalidOperationException` on duplicate | **PASS** |
-| **TC-10** | Successful Borrow Flow | Transaction Coordination | Slip generated, equipment marked unavailable | **PASS** |
-| **TC-11** | Ineligible Borrow Attempt | Precondition Validation | Throws `InvalidOperationException`, equipment safe | **PASS** |
-| **TC-12** | Unavailable Borrow Attempt | Precondition Validation | Throws `InvalidOperationException`, rejects loan | **PASS** |
-| **TC-13** | On-Time Good Return | Business Logic & Zero-Fine Path | Fee = $0.00, equipment made available, slip archived | **PASS** |
-| **TC-14** | Overdue Return Penalty | Fine Calculation & Clearance Hold | Fee > $0.00, clearance hold automatically placed | **PASS** |
-| **TC-15** | Incomplete Checklist Penalty | Peripheral Accounting & Penalty | Fee >= $150.00, clearance hold placed, item held | **PASS** |
-| **TC-16** | Damaged Return Coordination | Controller Collaboration | Fee >= $300.00, item marked Under Repair in controller | **PASS** |
-| **TC-17** | Inventory Persistence | Serialization & Disk I/O | Data saved and accurately reloaded into memory | **PASS** |
-
-### 4.2. Test Execution Log Summary
-
-```text
-================================================================
-          SCHOOL BORROWING SYSTEM - AUTOMATED QA TEST SUITE    
-================================================================
-
---> Scenario 1: OOP Polymorphism & Dynamic Return Checklists
-[PASS] AV Equipment checklist includes Power Cord
-[PASS] AV Equipment checklist includes Remote Control
-[PASS] AV Equipment checklist includes HDMI
-[PASS] AV Equipment default duration is 0 days (hourly loan)
-[PASS] Lab Equipment duration is 7 days
-[PASS] Lab Equipment checklist verifies 4 components
-
---> Scenario 2: Borrower Identity & Clearance Hold Validation
-[PASS] Clear borrower is eligible
-[PASS] Borrower with Clearance Hold is NOT eligible
-[PASS] Borrower without Student ID is NOT eligible
-
---> Scenario 3: EquipmentController Inventory & Repair Tracking
-[PASS] EquipmentController tracks all 2 added items
-[PASS] Both items initially available
-[PASS] AV-100 condition updated to 'Under Repair'
-[PASS] AV-100 availability revoked upon repair flagging
-[PASS] Only 1 item available after repair flagging
-[PASS] Duplicate PropertyTag registration is properly rejected
-
---> Scenario 4: Successful Borrowing Workflow & Due Time Calculation
-[PASS] BorrowSlip generated successfully
-[PASS] Equipment marked unavailable upon borrowing
-[PASS] Room assigned correctly
-[PASS] Due time set after time borrowed
-[PASS] New slip is not overdue
-[PASS] Active slips list reflects active transaction
-
---> Scenario 5: Rejection of Ineligible Borrowers
-[PASS] Ineligible borrower loan request is rejected with InvalidOperationException
-[PASS] Equipment remains available after rejected borrow
-[PASS] No slip recorded for rejected transaction
-
---> Scenario 6: Rejection of Unavailable Equipment
-[PASS] Unavailable equipment loan request rejected with InvalidOperationException
-
---> Scenario 7: On-time, Complete & Good Condition Return (Zero Penalty)
-[PASS] Zero penalty for timely and complete return
-[PASS] Equipment returned to available status
-[PASS] No clearance hold placed on borrower
-[PASS] Slip removed from active list
-[PASS] Slip moved to historical audit archive
-
---> Scenario 8: Overdue Return Penalty & Clearance Hold Enforcement
-[PASS] BorrowSlip correctly detects overdue condition
-[PASS] Overdue penalty applied correctly: ₱100.00
-[PASS] Clearance hold automatically enforced due to overdue fine
-
---> Scenario 9: Incomplete Checklist (Missing Cable) Penalty
-[PASS] Incomplete checklist penalty charged: ₱150.00
-[PASS] Clearance hold applied due to missing peripheral checklist
-[PASS] Item kept unavailable until missing accessories are reconciled
-
---> Scenario 10: Damaged Return & EquipmentController Repair Coordination
-[PASS] Damage assessment fee charged: ₱300.00
-[PASS] Equipment marked 'Under Repair' in EquipmentController
-[PASS] Damaged equipment availability revoked
-[PASS] Clearance hold applied to borrower for damaged property
-
---> Scenario 11: Inventory File Persistence & Deserialization
-[PASS] Inventory file successfully written to disk
-[PASS] Reloaded inventory matches original item count (2)
-[PASS] Polymorphic AVEquipment restored correctly
-[PASS] Polymorphic LabEquipment restored correctly
-
-================================================================
- TEST RESULTS SUMMARY: 44 PASSED | 0 FAILED | TOTAL: 44
-================================================================
-```
+### 3.7. Penalty System Removal
+- **Observation:** The system assesses monetary fines (`PHP 50-300`) upon return. Academic specifications prioritize non-monetary operational enforcement (clearance holds, repair routing, return condition tracking).
+- **Remediation Strategy:** Remove financial penalty calculations while retaining and strengthening administrative clearance hold logic and equipment condition updates.
 
 ---
 
-## 5. Visual Studio Compatibility & Team Setup Guide
+## 4. Minor Defect Analysis
 
-To ensure all team members can open, build, and execute the solution seamlessly in **Microsoft Visual Studio**:
-
-### 5.1. File Structure in Repository
-```text
-OOP FINALS/
-├── SchoolBorrowingSystem.sln             <-- Visual Studio Solution File
-├── SchoolBorrowingSystem/
-│   ├── SchoolBorrowingSystem.csproj     <-- C# Project File
-│   ├── Models/
-│   │   ├── SchoolBorrower.cs
-│   │   ├── SchoolEquipment.cs           <-- Abstract Base Class
-│   │   ├── AVEquipment.cs               <-- Inherits SchoolEquipment
-│   │   └── LabEquipment.cs              <-- Inherits SchoolEquipment
-│   ├── Transactions/
-│   │   └── BorrowSlip.cs                <-- Transaction Entity
-│   ├── Controllers/
-│   │   ├── EquipmentController.cs       <-- Inventory & Repair Manager
-│   │   └── BorrowingController.cs       <-- Loan & Return Coordinator
-│   ├── Program.cs                       <-- Interactive Dashboard Entry Point
-│   └── TestRunner.cs                    <-- Automated QA Test Suite
-├── QA_REPORT.md                         <-- This QA Report
-├── .gitignore                           <-- Visual Studio gitignore configuration
-└── README.md                            <-- Project Documentation
-```
-
-### 5.2. Steps to Run in Visual Studio
-1. Launch **Visual Studio 2019** or **Visual Studio 2022**.
-2. Click **Open a project or solution** and select `SchoolBorrowingSystem.sln`.
-3. Set the active configuration to **Debug** or **Release** with platform **Any CPU**.
-4. Build the solution using `Ctrl + Shift + B` (verify 0 Errors, 0 Warnings).
-5. Press `F5` (or click **Start Debugging**) to run the application:
-   - The program executes the automated QA validation suite first to confirm system integrity.
-   - Pressing any key transitions into the **Interactive System Dashboard**, where users can test borrowing, returns, repair flagging, and clearance holds directly.
+1. **Missing Accessories Return State:**
+   - In `ProcessReturn`, if `checklistComplete == false`, `slip.Equipment.Condition` was set to whatever was selected in the dropdown (often "Good"). The condition will now be explicitly updated to `"Missing Accessories / Incomplete"` so inventory displays the accurate physical state.
+2. **Missing Service-Layer Validation:**
+   - `EquipmentController.AddEquipment` now rejects null, empty, or whitespace-only tags.
+   - `BorrowingController.ProcessBorrow` now validates that `item` is registered in `EquipmentController`'s inventory before issuing a slip.
+3. **Hardcoded Component Count:**
+   - `AddEquipmentForm` will be updated with a `NumericUpDown` for Lab Apparatus `ComponentCount`, allowing custom values (1 to 50) rather than a fixed value of 3.
+4. **Dead Dialog Code:**
+   - Either wire up `BorrowForm` and `ReturnForm` or remove/refactor redundant dead methods so the codebase remains clean and maintainable.
 
 ---
 
-## 6. Code Quality & Maintainability Assessment
+## 5. Verification & Action Plan
 
-1. **No Spaghetti Code:** Every class is housed in its own dedicated source file under an organized namespace (`SchoolBorrowingSystem.Models`, `SchoolBorrowingSystem.Controllers`, `SchoolBorrowingSystem.Transactions`). Code execution follows structured control flow without circular dependencies.
-2. **Defensive Programming:** Null parameters, invalid IDs, duplicate property tags, and non-existent records throw meaningful, descriptive exceptions rather than causing unhandled crashes.
-3. **Convention Compliance:** Follows Microsoft C# conventions:
-   - `PascalCase` for classes, methods, and public properties.
-   - `_camelCase` with leading underscore for private fields.
-   - Structured XML documentation comments (`/// <summary>`) on all types and public members.
-
----
-
-## 7. QA Certification & Conclusion
-
-The **School Equipment Borrowing System** satisfies 100% of the functional and structural requirements defined in the UML specification. The core logic successfully embodies the four pillars of Object-Oriented Programming and adheres to enterprise software engineering standards.
-
-**Quality Assurance Verdict:** **PASSED & APPROVED FOR PRODUCTION AND ACADEMIC SUBMISSION.**
+Each issue will be addressed individually in strict priority order, with code refactoring adhering to OOP best practices, no spaghetti code, humanized concise code structure, Visual Studio compatibility, and a dedicated Git commit per item.
