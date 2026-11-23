@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SchoolBorrowingSystem.Controllers;
+using SchoolBorrowingSystem.Data;
 using SchoolBorrowingSystem.Models;
 using SchoolBorrowingSystem.Transactions;
 
@@ -9,7 +10,7 @@ namespace SchoolBorrowingSystem
     /// <summary>
     /// Automated Quality Assurance Test Suite.
     /// Rigorously validates all core logic, OOP principles, boundary conditions,
-    /// and business rules outlined in the UML specification.
+    /// CRUD operations, database persistence, and business rules.
     /// </summary>
     public static class TestRunner
     {
@@ -33,10 +34,17 @@ namespace SchoolBorrowingSystem
             TestIneligibleBorrowerRejection();
             TestUnavailableEquipmentRejection();
             TestCleanReturnNoFees();
-            TestOverdueReturnPenalty();
-            TestIncompleteChecklistPenalty();
+            TestOverdueReturnClearanceHold();
+            TestIncompleteChecklistClearanceHold();
             TestDamagedReturnAndAutomaticRepairWorkflow();
             TestInventoryPersistence();
+            TestRestoreUnitWhileActivelyBorrowed();
+            TestLoadInventoryMaintainsReturnIntegrity();
+            TestEquipmentUpdateCRUD();
+            TestEquipmentDeleteSafeguard();
+            TestServiceLayerInputValidation();
+            TestMissingAccessoriesReturnCondition();
+            TestDataStorePersistenceRoundtrip();
 
             Console.WriteLine();
             Console.WriteLine("================================================================");
@@ -74,7 +82,6 @@ namespace SchoolBorrowingSystem
             SchoolEquipment av = new AVEquipment("AV-001", "Epson HD Projector", true, true, true, 4);
             SchoolEquipment lab = new LabEquipment("LAB-001", "Binocular Microscope", DateTime.Now.AddMonths(-2), 4, 7);
 
-            // Test polymorphic method calls on SchoolEquipment reference
             List<string> avChecklist = av.GetReturnChecklist();
             List<string> labChecklist = lab.GetReturnChecklist();
 
@@ -227,19 +234,19 @@ namespace SchoolBorrowingSystem
             SchoolBorrower student = new SchoolBorrower("STU-2222", "Grace Hopper", "Student", "Biology");
 
             BorrowSlip slip = borrowCtrl.ProcessBorrow(student, microscope, "Bio Lab A");
-            double penalty = borrowCtrl.ProcessReturn(slip.SlipID, "Good", true);
+            bool holdApplied = borrowCtrl.ProcessReturn(slip.SlipID, "Good", true);
 
-            Assert(penalty == 0.0, "Zero penalty for timely and complete return");
+            Assert(holdApplied == false, "No clearance hold applied for timely and complete return");
             Assert(microscope.IsAvailable == true, "Equipment returned to available status");
             Assert(student.HasClearanceHold == false, "No clearance hold placed on borrower");
             Assert(borrowCtrl.GetActiveSlips().Count == 0, "Slip removed from active list");
             Assert(borrowCtrl.GetHistoricalSlips().Count == 1, "Slip moved to historical audit archive");
         }
 
-        private static void TestOverdueReturnPenalty()
+        private static void TestOverdueReturnClearanceHold()
         {
             Console.WriteLine();
-            Console.WriteLine("--> Scenario 8: Overdue Return Penalty & Clearance Hold Enforcement");
+            Console.WriteLine("--> Scenario 8: Overdue Return & Clearance Hold Enforcement (Zero Fine)");
 
             EquipmentController eqCtrl = new EquipmentController();
             AVEquipment projector = new AVEquipment("AV-601", "Epson Portable Projector", true, true, true, 2);
@@ -251,19 +258,19 @@ namespace SchoolBorrowingSystem
             BorrowSlip slip = borrowCtrl.ProcessBorrow(student, projector, "Lecture Hall 1");
 
             // Artificially simulate overdue loan by backdating DueTime
-            slip.DueTime = DateTime.Now.AddHours(-3); // 3 hours overdue
+            slip.DueTime = DateTime.Now.AddHours(-3);
             Assert(slip.IsOverdue() == true, "BorrowSlip correctly detects overdue condition");
 
-            double penalty = borrowCtrl.ProcessReturn(slip.SlipID, "Good", true);
+            bool holdApplied = borrowCtrl.ProcessReturn(slip.SlipID, "Good", true);
 
-            Assert(penalty > 0.0, string.Format("Overdue penalty applied correctly: {0:C}", penalty));
-            Assert(student.HasClearanceHold == true, "Clearance hold automatically enforced due to overdue fine");
+            Assert(holdApplied == true, "Clearance hold enforced for overdue return");
+            Assert(student.HasClearanceHold == true, "Borrower record updated with active clearance hold");
         }
 
-        private static void TestIncompleteChecklistPenalty()
+        private static void TestIncompleteChecklistClearanceHold()
         {
             Console.WriteLine();
-            Console.WriteLine("--> Scenario 9: Incomplete Checklist (Missing Cable) Penalty");
+            Console.WriteLine("--> Scenario 9: Incomplete Checklist (Missing Cable) Clearance Hold");
 
             EquipmentController eqCtrl = new EquipmentController();
             AVEquipment av = new AVEquipment("AV-701", "ViewSonic Smart Board", true, true, true, 4);
@@ -273,11 +280,12 @@ namespace SchoolBorrowingSystem
             SchoolBorrower student = new SchoolBorrower("STU-4444", "Ada Lovelace", "Student", "Computer Science");
 
             BorrowSlip slip = borrowCtrl.ProcessBorrow(student, av, "Lab 203");
-            double penalty = borrowCtrl.ProcessReturn(slip.SlipID, "Good", false); // Checklist incomplete!
+            bool holdApplied = borrowCtrl.ProcessReturn(slip.SlipID, "Good", false); // Missing accessories
 
-            Assert(penalty >= 150.00, string.Format("Incomplete checklist penalty charged: {0:C}", penalty));
-            Assert(student.HasClearanceHold == true, "Clearance hold applied due to missing peripheral checklist");
+            Assert(holdApplied == true, "Clearance hold applied due to missing peripheral checklist");
+            Assert(student.HasClearanceHold == true, "Borrower placed on hold for incomplete return");
             Assert(av.IsAvailable == false, "Item kept unavailable until missing accessories are reconciled");
+            Assert(av.Condition.Contains("Missing"), "Condition updated to reflect missing accessories");
         }
 
         private static void TestDamagedReturnAndAutomaticRepairWorkflow()
@@ -293,12 +301,12 @@ namespace SchoolBorrowingSystem
             SchoolBorrower student = new SchoolBorrower("STU-5555", "Dennis Ritchie", "Student", "Chemistry");
 
             BorrowSlip slip = borrowCtrl.ProcessBorrow(student, balance, "Chem Lab 4");
-            double penalty = borrowCtrl.ProcessReturn(slip.SlipID, "Damaged", true);
+            bool holdApplied = borrowCtrl.ProcessReturn(slip.SlipID, "Damaged", true);
 
-            Assert(penalty >= 300.00, string.Format("Damage assessment fee charged: {0:C}", penalty));
+            Assert(holdApplied == true, "Clearance hold applied to borrower for damaged property");
             Assert(balance.Condition == "Under Repair", "Equipment marked 'Under Repair' in EquipmentController");
             Assert(balance.IsAvailable == false, "Damaged equipment availability revoked");
-            Assert(student.HasClearanceHold == true, "Clearance hold applied to borrower for damaged property");
+            Assert(student.HasClearanceHold == true, "Clearance hold flag set on borrower entity");
         }
 
         private static void TestInventoryPersistence()
@@ -325,8 +333,219 @@ namespace SchoolBorrowingSystem
             SchoolEquipment reloadedLab = reloadedCtrl.FindEquipmentByTag("LAB-888");
             Assert(reloadedLab != null && reloadedLab is LabEquipment, "Polymorphic LabEquipment restored correctly");
 
-            // Clean up test file
             if (System.IO.File.Exists(testFile)) System.IO.File.Delete(testFile);
+        }
+
+        private static void TestRestoreUnitWhileActivelyBorrowed()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 12: 'Restore Unit' Bug Prevention (Loan Guard)");
+
+            EquipmentController eqCtrl = new EquipmentController();
+            AVEquipment av = new AVEquipment("AV-BUG1", "Laser Projector Unit", true, true, true, 4);
+            eqCtrl.AddEquipment(av);
+
+            BorrowingController borrowCtrl = new BorrowingController(eqCtrl);
+            SchoolBorrower borrower = new SchoolBorrower("STU-6001", "Gordon Freeman", "Faculty", "Physics");
+
+            // Checkout item
+            BorrowSlip slip = borrowCtrl.ProcessBorrow(borrower, av, "Lab 3");
+            Assert(av.IsAvailable == false, "Item is currently checked out to Gordon Freeman");
+
+            // Flag for repair while borrowed
+            eqCtrl.MarkForRepair("AV-BUG1");
+            Assert(av.Condition == "Under Repair", "Item flagged for repair during active loan");
+
+            // Attempt to restore unit while actively borrowed
+            bool isBorrowed = borrowCtrl.IsEquipmentBorrowed("AV-BUG1");
+            Assert(isBorrowed == true, "System accurately detects that unit is actively borrowed");
+
+            eqCtrl.CompleteRepair("AV-BUG1", isBorrowed);
+            Assert(av.Condition == "Good", "Condition is restored to Good");
+            Assert(av.IsAvailable == false, "CRITICAL: Item remains unavailable while borrower still holds it");
+
+            // Now return the unit
+            borrowCtrl.ProcessReturn(slip.SlipID, "Good", true);
+            Assert(av.IsAvailable == true, "Item only becomes available after borrower physically checks it in");
+        }
+
+        private static void TestLoadInventoryMaintainsReturnIntegrity()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 13: 'Load Inventory' Memory Reference Integrity");
+
+            string tempFile = "qa_rebind_test.txt";
+            if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile);
+
+            EquipmentController eqCtrl = new EquipmentController(tempFile);
+            AVEquipment original = new AVEquipment("AV-REBIND", "Smart Board Panel", true, true, true, 4);
+            eqCtrl.AddEquipment(original);
+            eqCtrl.SaveInventory();
+
+            BorrowingController borrowCtrl = new BorrowingController(eqCtrl);
+            SchoolBorrower borrower = new SchoolBorrower("STU-7001", "Ada Wong", "Student", "Biochem");
+
+            // Borrow item
+            BorrowSlip slip = borrowCtrl.ProcessBorrow(borrower, original, "Room 101");
+            Assert(original.IsAvailable == false, "Original instance marked unavailable");
+
+            // Simulate user clicking 'Load Inventory' (which instantiates new objects)
+            eqCtrl.LoadInventory();
+            borrowCtrl.SyncAvailabilityWithActiveLoans();
+
+            SchoolEquipment reloaded = eqCtrl.FindEquipmentByTag("AV-REBIND");
+            Assert(!object.ReferenceEquals(original, reloaded), "Reload created a distinct object instance in memory");
+            Assert(reloaded.IsAvailable == false, "Reloaded unit remains unavailable because an active slip exists");
+
+            // Return the slip
+            borrowCtrl.ProcessReturn(slip.SlipID, "Good", true);
+            Assert(reloaded.IsAvailable == true, "CRITICAL: Live reloaded inventory item is restored to Available status");
+
+            if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile);
+        }
+
+        private static void TestEquipmentUpdateCRUD()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 14: Equipment Full CRUD - Update Support");
+
+            EquipmentController eqCtrl = new EquipmentController();
+            AVEquipment av = new AVEquipment("AV-UPD1", "Old Display Name", false, false, false, 2);
+            eqCtrl.AddEquipment(av);
+
+            // Update item details
+            AVEquipment updatedSpecs = new AVEquipment("AV-UPD1", "New 4K OLED Display", true, true, true, 5);
+            eqCtrl.UpdateEquipment("AV-UPD1", updatedSpecs);
+
+            SchoolEquipment updated = eqCtrl.FindEquipmentByTag("AV-UPD1");
+            Assert(updated.ItemName == "New 4K OLED Display", "Item name successfully updated");
+            Assert(((AVEquipment)updated).BorrowDurationHours == 5, "Borrow duration updated");
+            Assert(((AVEquipment)updated).IncludesHDMI == true, "Peripherals updated");
+
+            // Tag rename update
+            AVEquipment renamed = new AVEquipment("AV-UPD2", "New 4K OLED Display", true, true, true, 5);
+            eqCtrl.UpdateEquipment("AV-UPD1", renamed);
+            Assert(eqCtrl.FindEquipmentByTag("AV-UPD1") == null, "Old tag no longer in inventory");
+            Assert(eqCtrl.FindEquipmentByTag("AV-UPD2") != null, "New tag present in inventory");
+        }
+
+        private static void TestEquipmentDeleteSafeguard()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 15: Equipment Full CRUD - Delete Support & Safeguards");
+
+            EquipmentController eqCtrl = new EquipmentController();
+            AVEquipment av = new AVEquipment("AV-DEL1", "Decommissioned Speaker", true, true, false, 2);
+            eqCtrl.AddEquipment(av);
+
+            BorrowingController borrowCtrl = new BorrowingController(eqCtrl);
+            SchoolBorrower student = new SchoolBorrower("STU-8001", "Eli Vance", "Faculty", "Engineering");
+
+            // Delete while not borrowed works
+            eqCtrl.DeleteEquipment("AV-DEL1", false);
+            Assert(eqCtrl.FindEquipmentByTag("AV-DEL1") == null, "Unborrowed equipment successfully deleted");
+
+            // Add again and borrow
+            AVEquipment av2 = new AVEquipment("AV-DEL2", "Active Projector", true, true, true, 4);
+            eqCtrl.AddEquipment(av2);
+            borrowCtrl.ProcessBorrow(student, av2, "Lab 5");
+
+            bool deleteBlocked = false;
+            try
+            {
+                eqCtrl.DeleteEquipment("AV-DEL2", borrowCtrl.IsEquipmentBorrowed("AV-DEL2"));
+            }
+            catch (InvalidOperationException)
+            {
+                deleteBlocked = true;
+            }
+            Assert(deleteBlocked == true, "CRITICAL: Deleting actively borrowed equipment is strictly rejected");
+        }
+
+        private static void TestServiceLayerInputValidation()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 16: Service-Layer Defensive Input Validation");
+
+            EquipmentController eqCtrl = new EquipmentController();
+
+            // Whitespace tag rejection
+            bool whitespaceRejected = false;
+            try
+            {
+                eqCtrl.AddEquipment(new AVEquipment("   ", "Valid Name", true, true, true));
+            }
+            catch (ArgumentException)
+            {
+                whitespaceRejected = true;
+            }
+            Assert(whitespaceRejected == true, "Whitespace-only PropertyTag is rejected by EquipmentController");
+
+            // Borrowing un-registered equipment rejection
+            BorrowingController borrowCtrl = new BorrowingController(eqCtrl);
+            SchoolBorrower borrower = new SchoolBorrower("STU-9001", "Isaac Clarke", "Student", "Mechanical");
+            AVEquipment ghostItem = new AVEquipment("AV-GHOST", "Phantom Gear", true, true, true);
+
+            bool ghostBorrowRejected = false;
+            try
+            {
+                borrowCtrl.ProcessBorrow(borrower, ghostItem, "Deep Space Lab");
+            }
+            catch (InvalidOperationException)
+            {
+                ghostBorrowRejected = true;
+            }
+            Assert(ghostBorrowRejected == true, "Borrowing equipment not registered in EquipmentController is rejected");
+        }
+
+        private static void TestMissingAccessoriesReturnCondition()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 17: Return with Missing Parts Condition Integrity");
+
+            EquipmentController eqCtrl = new EquipmentController();
+            AVEquipment av = new AVEquipment("AV-MISSING", "Conference Cam", true, true, true, 4);
+            eqCtrl.AddEquipment(av);
+
+            BorrowingController borrowCtrl = new BorrowingController(eqCtrl);
+            SchoolBorrower borrower = new SchoolBorrower("STU-9002", "Sarah Connor", "Student", "Defense");
+
+            BorrowSlip slip = borrowCtrl.ProcessBorrow(borrower, av, "Bunker");
+            borrowCtrl.ProcessReturn(slip.SlipID, "Good", false); // Checklist incomplete
+
+            Assert(av.Condition == "Missing Accessories / Incomplete", "Condition accurately reflects 'Missing Accessories / Incomplete' instead of misleading 'Good'");
+            Assert(av.IsAvailable == false, "Unit remains unavailable until accessories are returned");
+        }
+
+        private static void TestDataStorePersistenceRoundtrip()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--> Scenario 18: ISchoolDataStore Full Persistence Roundtrip");
+
+            ISchoolDataStore store = new InMemorySchoolDataStore();
+
+            AVEquipment av = new AVEquipment("AV-STORE1", "Stored Camcorder", true, true, true, 4);
+            LabEquipment lab = new LabEquipment("LAB-STORE1", "Stored Spectrometer", DateTime.Now, 5, 10);
+            SchoolBorrower borrower = new SchoolBorrower("2024-STORE", "Neo Anderson", "Student", "Computer Science");
+
+            store.SaveEquipment(av);
+            store.SaveEquipment(lab);
+            store.SaveBorrower(borrower);
+
+            var loadedEq = store.LoadEquipment();
+            var loadedBor = store.LoadBorrowers();
+
+            Assert(loadedEq.Count == 2, "DataStore loaded all 2 equipment records");
+            Assert(loadedBor.Count == 1, "DataStore loaded borrower record");
+            Assert(loadedBor[0].FullName == "Neo Anderson", "Borrower data restored accurately");
+
+            // Save slip roundtrip
+            BorrowSlip slip = new BorrowSlip("SLIP-STORE1", borrower, av, "Matrix Lab", DateTime.Now, DateTime.Now.AddHours(4), "Operator");
+            store.SaveSlip(slip);
+
+            var loadedSlips = store.LoadSlips(loadedBor, loadedEq);
+            Assert(loadedSlips.Count == 1, "DataStore loaded slip transaction");
+            Assert(loadedSlips[0].RoomToBeUsed == "Matrix Lab", "Slip transaction data verified");
         }
     }
 }

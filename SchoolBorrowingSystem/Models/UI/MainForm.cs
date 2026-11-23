@@ -740,9 +740,9 @@ namespace SchoolBorrowingSystem.UI
                     AudioHelper.PlayTestVictory();
                     _qaMeter.Percent = 100;
                     _qaMeter.AccentColor = GtaPalette.StatusClear;
-                    _qaMeter.StatusText = "MISSION PASSED  //  44 / 44 OOP ASSERTIONS VERIFIED (100%)";
-                    SetStatus("All 44 Automated QA Unit & Integration Tests PASSED!", false);
-                    _toastBanner.ShowBanner("ALL 44 QA TESTS PASSED", "OOP encapsulation, inheritance & rules verified.", GtaPalette.ViceMagenta);
+                    _qaMeter.StatusText = "MISSION PASSED  //  ALL QA ASSERTIONS VERIFIED (100%)";
+                    SetStatus("All Automated QA Unit, Integration & Regression Tests PASSED!", false);
+                    _toastBanner.ShowBanner("ALL QA TESTS PASSED", "Encapsulation, CRUD, persistence & invariants verified.", GtaPalette.ViceMagenta);
                 }
                 else
                 {

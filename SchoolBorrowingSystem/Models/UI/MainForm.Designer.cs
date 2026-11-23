@@ -933,7 +933,7 @@ namespace SchoolBorrowingSystem.UI
             this.btnRunQa.AccentColor = Color.FromArgb(236, 46, 158);
             this.btnRunQa.Dock = DockStyle.Fill;
             this.btnRunQa.Margin = new Padding(0, 6, 12, 8);
-            this.btnRunQa.Text = "RUN ALL 44 AUTOMATED QA TESTS";
+            this.btnRunQa.Text = "RUN ALL AUTOMATED QA TESTS";
             this.btnRunQa.Click += new EventHandler(this.BtnRunQa_Click);
 
             this._qaMeter.AccentColor = Color.FromArgb(72, 232, 214);
