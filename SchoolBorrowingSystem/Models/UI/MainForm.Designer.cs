@@ -37,6 +37,8 @@ namespace SchoolBorrowingSystem.UI
         private GtaSearchBox _txtSearchEquipment;
         private GtaToggleSwitch _chkAvailableOnly;
         private GtaTileButton btnAddEquipment;
+        private GtaTileButton btnEditEquipment;
+        private GtaTileButton btnDeleteEquipment;
         private GtaTileButton btnSave;
         private GtaTileButton btnLoad;
         private TableLayoutPanel tlpInvBody;
@@ -149,6 +151,8 @@ namespace SchoolBorrowingSystem.UI
             this._txtSearchEquipment = new GtaSearchBox();
             this._chkAvailableOnly = new GtaToggleSwitch();
             this.btnAddEquipment = new GtaTileButton();
+            this.btnEditEquipment = new GtaTileButton();
+            this.btnDeleteEquipment = new GtaTileButton();
             this.btnSave = new GtaTileButton();
             this.btnLoad = new GtaTileButton();
             this.tlpInvBody = new TableLayoutPanel();
@@ -418,6 +422,8 @@ namespace SchoolBorrowingSystem.UI
             this.pnlInvTop.Controls.Add(this._txtSearchEquipment);
             this.pnlInvTop.Controls.Add(this._chkAvailableOnly);
             this.pnlInvTop.Controls.Add(this.btnAddEquipment);
+            this.pnlInvTop.Controls.Add(this.btnEditEquipment);
+            this.pnlInvTop.Controls.Add(this.btnDeleteEquipment);
             this.pnlInvTop.Controls.Add(this.btnSave);
             this.pnlInvTop.Controls.Add(this.btnLoad);
             this.pnlInvTop.Dock = DockStyle.Top;
@@ -436,20 +442,32 @@ namespace SchoolBorrowingSystem.UI
             this._chkAvailableOnly.CheckedChanged += new EventHandler(this.ChkAvailableOnly_CheckedChanged);
 
             this.btnAddEquipment.AccentColor = Color.FromArgb(72, 232, 214);
-            this.btnAddEquipment.Location = new Point(470, 7);
-            this.btnAddEquipment.Size = new Size(150, 36);
+            this.btnAddEquipment.Location = new Point(450, 7);
+            this.btnAddEquipment.Size = new Size(120, 36);
             this.btnAddEquipment.Text = "+ ADD GEAR";
             this.btnAddEquipment.Click += new EventHandler(this.BtnAddEquipment_Click);
 
+            this.btnEditEquipment.AccentColor = Color.FromArgb(255, 196, 134);
+            this.btnEditEquipment.Location = new Point(580, 7);
+            this.btnEditEquipment.Size = new Size(120, 36);
+            this.btnEditEquipment.Text = "EDIT GEAR";
+            this.btnEditEquipment.Click += new EventHandler(this.BtnEditEquipment_Click);
+
+            this.btnDeleteEquipment.AccentColor = Color.FromArgb(255, 68, 96);
+            this.btnDeleteEquipment.Location = new Point(710, 7);
+            this.btnDeleteEquipment.Size = new Size(125, 36);
+            this.btnDeleteEquipment.Text = "DELETE GEAR";
+            this.btnDeleteEquipment.Click += new EventHandler(this.BtnDeleteEquipment_Click);
+
             this.btnSave.AccentColor = Color.FromArgb(255, 114, 107);
-            this.btnSave.Location = new Point(630, 7);
-            this.btnSave.Size = new Size(140, 36);
+            this.btnSave.Location = new Point(845, 7);
+            this.btnSave.Size = new Size(110, 36);
             this.btnSave.Text = "SAVE FILE";
             this.btnSave.Click += new EventHandler(this.BtnSave_Click);
 
-            this.btnLoad.AccentColor = Color.FromArgb(255, 196, 134);
-            this.btnLoad.Location = new Point(780, 7);
-            this.btnLoad.Size = new Size(135, 36);
+            this.btnLoad.AccentColor = Color.FromArgb(236, 46, 158);
+            this.btnLoad.Location = new Point(965, 7);
+            this.btnLoad.Size = new Size(110, 36);
             this.btnLoad.Text = "LOAD FILE";
             this.btnLoad.Click += new EventHandler(this.BtnLoad_Click);
 

@@ -22,6 +22,8 @@ namespace SchoolBorrowingSystem.UI
         private CheckBox chkRemote;
         private CheckBox chkPowerCord;
         private CheckBox chkHdmi;
+        private Label lblComponents;
+        private NumericUpDown numComponents;
         private Label lblLabSpecs;
         private Label lblDuration;
         private NumericUpDown numDuration;
@@ -53,6 +55,8 @@ namespace SchoolBorrowingSystem.UI
             this.chkRemote = new CheckBox();
             this.chkPowerCord = new CheckBox();
             this.chkHdmi = new CheckBox();
+            this.lblComponents = new Label();
+            this.numComponents = new NumericUpDown();
             this.lblLabSpecs = new Label();
             this.lblDuration = new Label();
             this.numDuration = new NumericUpDown();
@@ -64,6 +68,7 @@ namespace SchoolBorrowingSystem.UI
             this.cardMain.SuspendLayout();
             this.pnlCategorySpecs.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numDuration)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numComponents)).BeginInit();
             this.SuspendLayout();
 
             // ==================== HEADER BAR ====================
@@ -158,6 +163,8 @@ namespace SchoolBorrowingSystem.UI
             this.pnlCategorySpecs.Controls.Add(this.chkRemote);
             this.pnlCategorySpecs.Controls.Add(this.chkPowerCord);
             this.pnlCategorySpecs.Controls.Add(this.chkHdmi);
+            this.pnlCategorySpecs.Controls.Add(this.lblComponents);
+            this.pnlCategorySpecs.Controls.Add(this.numComponents);
             this.pnlCategorySpecs.Controls.Add(this.lblLabSpecs);
             this.pnlCategorySpecs.Location = new Point(16, 218);
             this.pnlCategorySpecs.Size = new Size(456, 74);
@@ -186,11 +193,30 @@ namespace SchoolBorrowingSystem.UI
             this.chkHdmi.Location = new Point(288, 34);
             this.chkHdmi.Text = "HDMI Cable";
 
-            this.lblLabSpecs.Font = new Font("Segoe UI", 8.75F);
+            this.lblComponents.AutoSize = true;
+            this.lblComponents.Font = new Font("Bahnschrift SemiBold", 8.5F, FontStyle.Bold);
+            this.lblComponents.ForeColor = Color.FromArgb(245, 244, 252);
+            this.lblComponents.Location = new Point(12, 36);
+            this.lblComponents.Text = "COMPONENTS:";
+            this.lblComponents.Visible = false;
+
+            this.numComponents.BackColor = Color.FromArgb(36, 33, 56);
+            this.numComponents.BorderStyle = BorderStyle.FixedSingle;
+            this.numComponents.Font = new Font("Consolas", 10F, FontStyle.Bold);
+            this.numComponents.ForeColor = Color.FromArgb(245, 244, 252);
+            this.numComponents.Location = new Point(110, 33);
+            this.numComponents.Maximum = 50;
+            this.numComponents.Minimum = 1;
+            this.numComponents.Size = new Size(65, 26);
+            this.numComponents.Value = 3;
+            this.numComponents.Visible = false;
+            this.numComponents.ValueChanged += new EventHandler(this.Input_Changed);
+
+            this.lblLabSpecs.Font = new Font("Segoe UI", 8.25F);
             this.lblLabSpecs.ForeColor = Color.FromArgb(255, 190, 146);
-            this.lblLabSpecs.Location = new Point(12, 28);
-            this.lblLabSpecs.Size = new Size(430, 38);
-            this.lblLabSpecs.Text = "CALIBRATION DATE: TODAY  //  SAFETY LEVEL: TIER 3\r\nLab-grade safety & calibration checklist is assigned automatically.";
+            this.lblLabSpecs.Location = new Point(185, 30);
+            this.lblLabSpecs.Size = new Size(260, 38);
+            this.lblLabSpecs.Text = "CALIBRATION: TODAY // SAFETY: TIER 3\r\nLab safety & component checklist auto-applied.";
             this.lblLabSpecs.Visible = false;
 
             // Max Borrow Duration + Live Preview Pill
@@ -266,6 +292,7 @@ namespace SchoolBorrowingSystem.UI
             this.pnlCategorySpecs.ResumeLayout(false);
             this.pnlCategorySpecs.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numDuration)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numComponents)).EndInit();
             this.ResumeLayout(false);
         }
     }

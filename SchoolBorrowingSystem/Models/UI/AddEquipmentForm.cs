@@ -9,16 +9,45 @@ namespace SchoolBorrowingSystem.UI
     public partial class AddEquipmentForm : Form
     {
         private readonly EquipmentController _equipmentController;
+        private readonly SchoolEquipment _existingItem;
 
         public AddEquipmentForm()
         {
             InitializeComponent();
         }
 
-        public AddEquipmentForm(EquipmentController equipmentController)
+        public AddEquipmentForm(EquipmentController equipmentController, SchoolEquipment existingItem = null)
             : this()
         {
             _equipmentController = equipmentController;
+            _existingItem = existingItem;
+
+            if (_existingItem != null)
+            {
+                headerBar.TitleText = "EDIT EQUIPMENT SPECIFICATIONS";
+                headerBar.SubtitleText = "MODIFY ASSET DETAILS  //  " + _existingItem.PropertyTag;
+                btnAdd.Text = "SAVE CHANGES";
+                btnAutoTag.Visible = false;
+
+                txtTag.Text = _existingItem.PropertyTag;
+                txtName.Text = _existingItem.ItemName;
+
+                if (_existingItem is AVEquipment av)
+                {
+                    cmbCategory.SelectedIndex = 0;
+                    chkRemote.Checked = av.IncludesRemote;
+                    chkPowerCord.Checked = av.IncludesPowerCord;
+                    chkHdmi.Checked = av.IncludesHDMI;
+                    numDuration.Value = Math.Max(1, Math.Min(30, av.BorrowDurationHours));
+                }
+                else if (_existingItem is LabEquipment lab)
+                {
+                    cmbCategory.SelectedIndex = 1;
+                    numDuration.Value = Math.Max(1, Math.Min(30, lab.BorrowDurationDays));
+                    numComponents.Value = Math.Max(1, Math.Min(50, lab.ComponentCount));
+                }
+            }
+
             UpdatePreview();
         }
 
@@ -35,6 +64,8 @@ namespace SchoolBorrowingSystem.UI
             chkRemote.Visible = isAv;
             chkPowerCord.Visible = isAv;
             chkHdmi.Visible = isAv;
+            lblComponents.Visible = !isAv;
+            numComponents.Visible = !isAv;
             lblLabSpecs.Visible = !isAv;
 
             cardMain.AccentColor = isAv ? GtaPalette.ViceTeal : GtaPalette.ViceMagenta;
@@ -105,17 +136,38 @@ namespace SchoolBorrowingSystem.UI
 
             try
             {
-                SchoolEquipment newItem;
-                if (cmbCategory.SelectedIndex == 0)
+                if (_existingItem != null)
                 {
-                    newItem = new AVEquipment(tag, name, chkRemote.Checked, chkPowerCord.Checked, chkHdmi.Checked, duration);
+                    SchoolEquipment updated;
+                    if (cmbCategory.SelectedIndex == 0)
+                    {
+                        updated = new AVEquipment(tag, name, chkRemote.Checked, chkPowerCord.Checked, chkHdmi.Checked, duration, _existingItem.Condition, _existingItem.IsAvailable);
+                    }
+                    else
+                    {
+                        int components = (int)numComponents.Value;
+                        DateTime cal = (_existingItem is LabEquipment existingLab) ? existingLab.CalibrationDate : DateTime.Now;
+                        updated = new LabEquipment(tag, name, cal, components, duration, _existingItem.Condition, _existingItem.IsAvailable);
+                    }
+
+                    _equipmentController.UpdateEquipment(_existingItem.PropertyTag, updated);
                 }
                 else
                 {
-                    newItem = new LabEquipment(tag, name, DateTime.Now, 3, duration);
+                    SchoolEquipment newItem;
+                    if (cmbCategory.SelectedIndex == 0)
+                    {
+                        newItem = new AVEquipment(tag, name, chkRemote.Checked, chkPowerCord.Checked, chkHdmi.Checked, duration);
+                    }
+                    else
+                    {
+                        int components = (int)numComponents.Value;
+                        newItem = new LabEquipment(tag, name, DateTime.Now, components, duration);
+                    }
+
+                    _equipmentController.AddEquipment(newItem);
                 }
 
-                _equipmentController.AddEquipment(newItem);
                 AudioHelper.PlaySuccess();
                 this.DialogResult = DialogResult.OK;
                 this.Close();

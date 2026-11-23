@@ -128,6 +128,78 @@ namespace SchoolBorrowingSystem.UI
             OpenAddEquipmentDialog();
         }
 
+        private void BtnEditEquipment_Click(object sender, EventArgs e)
+        {
+            string tag = GetSelectedFirstCell(_dgvEquipment);
+            if (string.IsNullOrEmpty(tag))
+            {
+                AudioHelper.PlayError();
+                _toastBanner.ShowBanner("NO ASSET SELECTED", "Select an equipment row to edit.", GtaPalette.StatusWanted);
+                return;
+            }
+
+            var item = _equipmentController.FindEquipmentByTag(tag);
+            if (item == null) return;
+
+            AudioHelper.PlayMenuClick();
+            using (var dlg = new AddEquipmentForm(_equipmentController, item))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    _borrowingController.RebindEquipmentReferences();
+                    RefreshAllViews();
+                    SetStatus(string.Format("Equipment '{0}' updated successfully.", item.PropertyTag), false);
+                    _toastBanner.ShowBanner("GEAR UPDATED", item.PropertyTag + " specifications modified.", GtaPalette.StatusClear);
+                }
+            }
+        }
+
+        private void BtnDeleteEquipment_Click(object sender, EventArgs e)
+        {
+            string tag = GetSelectedFirstCell(_dgvEquipment);
+            if (string.IsNullOrEmpty(tag))
+            {
+                AudioHelper.PlayError();
+                _toastBanner.ShowBanner("NO ASSET SELECTED", "Select an equipment row to delete.", GtaPalette.StatusWanted);
+                return;
+            }
+
+            var item = _equipmentController.FindEquipmentByTag(tag);
+            if (item == null) return;
+
+            bool isBorrowed = _borrowingController.IsEquipmentBorrowed(tag);
+            if (isBorrowed)
+            {
+                AudioHelper.PlayError();
+                _toastBanner.ShowBanner("DELETE BLOCKED", "Cannot delete " + tag + " while actively on loan.", GtaPalette.StatusWanted);
+                MessageBox.Show(string.Format("Cannot delete equipment '{0}' ({1}) because a borrower currently holds it.", tag, item.ItemName),
+                    "Deletion Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DialogResult confirm = MessageBox.Show(
+                string.Format("Are you sure you want to delete equipment [{0}] {1}?\n\nThis will remove it from inventory and data store.", tag, item.ItemName),
+                "Confirm Deletion",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirm != DialogResult.Yes) return;
+
+            try
+            {
+                _equipmentController.DeleteEquipment(tag, false);
+                RefreshAllViews();
+                AudioHelper.PlaySuccess();
+                SetStatus(string.Format("Equipment '{0}' deleted from inventory.", tag), false);
+                _toastBanner.ShowBanner("EQUIPMENT DELETED", tag + " removed from catalog.", GtaPalette.SunsetPeach);
+            }
+            catch (Exception ex)
+            {
+                AudioHelper.PlayError();
+                MessageBox.Show(ex.Message, "Delete Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void DgvEquipment_SelectionChanged(object sender, EventArgs e)
         {
             UpdateSelectedAssetDossier();

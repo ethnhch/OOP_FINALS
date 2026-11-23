@@ -152,6 +152,15 @@ namespace SchoolBorrowingSystem.Controllers
                 throw new ArgumentNullException("item", "Equipment item cannot be null.");
             }
 
+            // Verify equipment belongs to registered school inventory
+            SchoolEquipment inventoryItem = _equipmentController.FindEquipmentByTag(item.PropertyTag);
+            if (inventoryItem == null)
+            {
+                throw new InvalidOperationException(
+                    string.Format("Equipment '{0}' (PropertyTag: {1}) does not exist in school inventory.",
+                        item.ItemName, item.PropertyTag));
+            }
+
             // Verify borrower clearance and identity
             if (!borrower.CheckEligibility())
             {
@@ -161,29 +170,30 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             // Verify equipment availability
-            if (!item.IsAvailable)
+            if (!inventoryItem.IsAvailable)
             {
                 throw new InvalidOperationException(
                     string.Format("Equipment '{0}' (PropertyTag: {1}) is not currently available for borrowing (Condition: {2}).",
-                        item.ItemName, item.PropertyTag, item.Condition));
+                        inventoryItem.ItemName, inventoryItem.PropertyTag, inventoryItem.Condition));
             }
 
             // Calculate loan due time polymorphically
             DateTime now = DateTime.Now;
             DateTime dueTime;
 
-            if (item is AVEquipment)
+            if (inventoryItem is AVEquipment)
             {
-                AVEquipment av = (AVEquipment)item;
+                AVEquipment av = (AVEquipment)inventoryItem;
                 dueTime = now.AddHours(av.GetBorrowDurationHours());
             }
             else
             {
-                int durationDays = item.GetBorrowDurationDays();
+                int durationDays = inventoryItem.GetBorrowDurationDays();
                 dueTime = durationDays > 0 ? now.AddDays(durationDays) : now.AddHours(4);
             }
 
             // Update equipment availability status
+            inventoryItem.IsAvailable = false;
             item.IsAvailable = false;
 
             // Generate unique slip ID
@@ -191,7 +201,7 @@ namespace SchoolBorrowingSystem.Controllers
             string slipID = string.Format("SLIP-{0}", _slipSequenceCounter);
 
             string assignedRoom = string.IsNullOrEmpty(room) ? "General Campus / Lecture Hall" : room.Trim();
-            BorrowSlip slip = new BorrowSlip(slipID, borrower, item, assignedRoom, now, dueTime, "Staff Desk");
+            BorrowSlip slip = new BorrowSlip(slipID, borrower, inventoryItem, assignedRoom, now, dueTime, "Staff Desk");
 
             _activeSlips.Add(slip);
 

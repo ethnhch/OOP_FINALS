@@ -47,23 +47,137 @@ namespace SchoolBorrowingSystem.Controllers
                 throw new ArgumentNullException("item", "Equipment item cannot be null.");
             }
 
-            if (string.IsNullOrEmpty(item.PropertyTag))
+            if (string.IsNullOrWhiteSpace(item.PropertyTag))
             {
-                throw new ArgumentException("Equipment PropertyTag cannot be empty.", "item");
+                throw new ArgumentException("Equipment PropertyTag cannot be empty or whitespace.", "item");
+            }
+
+            if (string.IsNullOrWhiteSpace(item.ItemName))
+            {
+                throw new ArgumentException("Equipment ItemName cannot be empty or whitespace.", "item");
             }
 
             // Ensure uniqueness of PropertyTag
-            SchoolEquipment existing = FindEquipmentByTag(item.PropertyTag);
+            SchoolEquipment existing = FindEquipmentByTag(item.PropertyTag.Trim());
             if (existing != null)
             {
                 throw new InvalidOperationException(string.Format("Equipment with PropertyTag '{0}' is already registered.", item.PropertyTag));
             }
 
+            item.PropertyTag = item.PropertyTag.Trim();
+            item.ItemName = item.ItemName.Trim();
             _inventory.Add(item);
 
             if (_store != null)
             {
                 _store.SaveEquipment(item);
+            }
+        }
+
+        /// <summary>
+        /// Updates an existing equipment item with new specifications (name, tag, borrow time, accessories).
+        /// </summary>
+        /// <param name="originalTag">The current property tag of the item to update.</param>
+        /// <param name="updatedItem">The updated equipment instance containing new values.</param>
+        public void UpdateEquipment(string originalTag, SchoolEquipment updatedItem)
+        {
+            if (string.IsNullOrWhiteSpace(originalTag))
+            {
+                throw new ArgumentException("Original property tag cannot be empty.", "originalTag");
+            }
+
+            if (updatedItem == null)
+            {
+                throw new ArgumentNullException("updatedItem", "Updated equipment item cannot be null.");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedItem.PropertyTag))
+            {
+                throw new ArgumentException("Updated property tag cannot be empty or whitespace.", "updatedItem");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedItem.ItemName))
+            {
+                throw new ArgumentException("Updated item name cannot be empty or whitespace.", "updatedItem");
+            }
+
+            SchoolEquipment existing = FindEquipmentByTag(originalTag);
+            if (existing == null)
+            {
+                throw new KeyNotFoundException(string.Format("No equipment found with PropertyTag '{0}'.", originalTag));
+            }
+
+            string newTag = updatedItem.PropertyTag.Trim();
+            bool tagChanged = !string.Equals(originalTag.Trim(), newTag, StringComparison.OrdinalIgnoreCase);
+
+            if (tagChanged)
+            {
+                SchoolEquipment tagConflict = FindEquipmentByTag(newTag);
+                if (tagConflict != null)
+                {
+                    throw new InvalidOperationException(string.Format("Equipment with PropertyTag '{0}' is already registered.", newTag));
+                }
+            }
+
+            // Update common properties
+            existing.PropertyTag = newTag;
+            existing.ItemName = updatedItem.ItemName.Trim();
+            existing.Condition = updatedItem.Condition;
+
+            // Update polymorphic subtype properties
+            if (existing is AVEquipment avExisting && updatedItem is AVEquipment avUpdated)
+            {
+                avExisting.IncludesRemote = avUpdated.IncludesRemote;
+                avExisting.IncludesPowerCord = avUpdated.IncludesPowerCord;
+                avExisting.IncludesHDMI = avUpdated.IncludesHDMI;
+                avExisting.BorrowDurationHours = avUpdated.BorrowDurationHours;
+            }
+            else if (existing is LabEquipment labExisting && updatedItem is LabEquipment labUpdated)
+            {
+                labExisting.CalibrationDate = labUpdated.CalibrationDate;
+                labExisting.ComponentCount = labUpdated.ComponentCount;
+                labExisting.BorrowDurationDays = labUpdated.BorrowDurationDays;
+            }
+
+            if (_store != null)
+            {
+                if (tagChanged)
+                {
+                    _store.DeleteEquipment(originalTag);
+                }
+                _store.SaveEquipment(existing);
+            }
+        }
+
+        /// <summary>
+        /// Deletes an equipment item from the school inventory.
+        /// Rejects deletion if the item is currently on loan.
+        /// </summary>
+        /// <param name="propertyTag">Property tag of the equipment to delete.</param>
+        /// <param name="isCurrentlyBorrowed">Whether the equipment is currently held by an active loan.</param>
+        public void DeleteEquipment(string propertyTag, bool isCurrentlyBorrowed = false)
+        {
+            if (string.IsNullOrWhiteSpace(propertyTag))
+            {
+                throw new ArgumentException("Property tag cannot be empty.", "propertyTag");
+            }
+
+            SchoolEquipment existing = FindEquipmentByTag(propertyTag);
+            if (existing == null)
+            {
+                throw new KeyNotFoundException(string.Format("No equipment found with PropertyTag '{0}'.", propertyTag));
+            }
+
+            if (isCurrentlyBorrowed)
+            {
+                throw new InvalidOperationException(string.Format("Cannot delete equipment '{0}' while it is actively borrowed.", propertyTag));
+            }
+
+            _inventory.Remove(existing);
+
+            if (_store != null)
+            {
+                _store.DeleteEquipment(propertyTag);
             }
         }
 
