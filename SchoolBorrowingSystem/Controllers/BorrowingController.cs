@@ -86,6 +86,53 @@ namespace SchoolBorrowingSystem.Controllers
         }
 
         /// <summary>
+        /// Re-binds active and historical slip equipment references to the live items in EquipmentController.
+        /// Ensures reference integrity after inventory reloads from disk or storage.
+        /// </summary>
+        public void RebindEquipmentReferences()
+        {
+            foreach (var slip in _activeSlips)
+            {
+                if (slip.Equipment != null)
+                {
+                    var live = _equipmentController.FindEquipmentByTag(slip.Equipment.PropertyTag);
+                    if (live != null)
+                    {
+                        slip.Equipment = live;
+                    }
+                }
+            }
+
+            foreach (var slip in _historicalSlips)
+            {
+                if (slip.Equipment != null)
+                {
+                    var live = _equipmentController.FindEquipmentByTag(slip.Equipment.PropertyTag);
+                    if (live != null)
+                    {
+                        slip.Equipment = live;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Synchronizes inventory availability flags with currently active loans after an inventory reload.
+        /// Re-binds slip references and guarantees that loaned equipment is not falsely shown as available.
+        /// </summary>
+        public void SyncAvailabilityWithActiveLoans()
+        {
+            RebindEquipmentReferences();
+            foreach (var slip in _activeSlips)
+            {
+                if (slip.Equipment != null)
+                {
+                    slip.Equipment.IsAvailable = false;
+                }
+            }
+        }
+
+        /// <summary>
         /// Processes an equipment borrow request for an eligible borrower.
         /// Updates equipment availability and coordinates loan durations.
         /// </summary>
@@ -207,7 +254,17 @@ namespace SchoolBorrowingSystem.Controllers
 
             // 3. Equipment Condition Assessment & Repair Coordination
             string finalCondition = string.IsNullOrEmpty(condition) ? "Good" : condition.Trim();
-            slip.Equipment.Condition = finalCondition;
+
+            // Re-resolve live equipment instance from EquipmentController to prevent stale/orphan reference desynchronization
+            SchoolEquipment liveItem = (slip.Equipment != null)
+                ? (_equipmentController.FindEquipmentByTag(slip.Equipment.PropertyTag) ?? slip.Equipment)
+                : null;
+
+            if (liveItem != null)
+            {
+                liveItem.Condition = finalCondition;
+                slip.Equipment = liveItem; // Ensure slip points to live instance
+            }
 
             bool isDamaged = string.Equals(finalCondition, "Damaged", StringComparison.OrdinalIgnoreCase) ||
                              string.Equals(finalCondition, "Needs Repair", StringComparison.OrdinalIgnoreCase) ||
@@ -216,17 +273,34 @@ namespace SchoolBorrowingSystem.Controllers
             if (isDamaged)
             {
                 totalPenalty += 300.00; // Damage restoration fee
-                _equipmentController.MarkForRepair(slip.Equipment.PropertyTag);
+                if (liveItem != null)
+                {
+                    _equipmentController.MarkForRepair(liveItem.PropertyTag);
+                }
             }
             else if (checklistComplete)
             {
                 // Return item back to active circulation
-                slip.Equipment.IsAvailable = true;
+                if (liveItem != null)
+                {
+                    liveItem.IsAvailable = true;
+                    if (_store != null)
+                    {
+                        _store.SaveEquipment(liveItem);
+                    }
+                }
             }
             else
             {
                 // Incomplete checklist retains item as unavailable until accessories are retrieved
-                slip.Equipment.IsAvailable = false;
+                if (liveItem != null)
+                {
+                    liveItem.IsAvailable = false;
+                    if (_store != null)
+                    {
+                        _store.SaveEquipment(liveItem);
+                    }
+                }
             }
 
             // 4. Apply clearance hold if violations occur

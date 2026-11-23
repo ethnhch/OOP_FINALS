@@ -337,6 +337,7 @@ namespace SchoolBorrowingSystem.UI
                 else
                 {
                     _equipmentController.LoadInventory();
+                    _borrowingController.SyncAvailabilityWithActiveLoans();
                 }
                 RefreshAllViews();
                 AudioHelper.PlaySuccess();
