@@ -430,15 +430,29 @@ namespace SchoolBorrowingSystem.UI
                 return;
             }
 
-            var item = _equipmentController.FindEquipmentByTag(tag);
-            if (item != null)
+            try
             {
-                item.Condition = "Good";
-                item.IsAvailable = true;
+                bool isBorrowed = _borrowingController.IsEquipmentBorrowed(tag);
+                _equipmentController.CompleteRepair(tag, isBorrowed);
                 RefreshAllViews();
-                AudioHelper.PlaySuccess();
-                SetStatus(string.Format("Equipment '{0}' repaired and restored to Good / Available status.", tag), false);
-                _toastBanner.ShowBanner("REPAIR COMPLETE", tag + " restored to Good / Available status.", GtaPalette.StatusClear);
+
+                if (isBorrowed)
+                {
+                    AudioHelper.PlayWarning();
+                    SetStatus(string.Format("Equipment '{0}' repaired to Good condition, but remains UNAVAILABLE (actively borrowed).", tag), true);
+                    _toastBanner.ShowBanner("REPAIRED (STILL BORROWED)", tag + " is Good, but held by borrower.", GtaPalette.SunsetPeach);
+                }
+                else
+                {
+                    AudioHelper.PlaySuccess();
+                    SetStatus(string.Format("Equipment '{0}' repaired and restored to Good / Available status.", tag), false);
+                    _toastBanner.ShowBanner("REPAIR COMPLETE", tag + " restored to Good / Available status.", GtaPalette.StatusClear);
+                }
+            }
+            catch (Exception ex)
+            {
+                AudioHelper.PlayError();
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

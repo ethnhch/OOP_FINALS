@@ -140,10 +140,12 @@ namespace SchoolBorrowingSystem.Controllers
         }
 
         /// <summary>
-        /// Completes a repair: the item goes back to Good condition and becomes available again.
+        /// Completes a repair: the item goes back to Good condition.
+        /// If the item is currently on loan to a borrower, it remains unavailable until physically returned.
         /// </summary>
         /// <param name="propertyTag">Property tag of the repaired equipment.</param>
-        public void CompleteRepair(string propertyTag)
+        /// <param name="isCurrentlyBorrowed">True if an active loan slip currently holds this unit.</param>
+        public void CompleteRepair(string propertyTag, bool isCurrentlyBorrowed = false)
         {
             SchoolEquipment item = FindEquipmentByTag(propertyTag);
             if (item == null)
@@ -152,7 +154,7 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             item.Condition = "Good";
-            item.IsAvailable = true;
+            item.IsAvailable = !isCurrentlyBorrowed;
 
             if (_store != null)
             {

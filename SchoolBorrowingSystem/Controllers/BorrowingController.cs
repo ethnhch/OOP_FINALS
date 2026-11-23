@@ -61,6 +61,31 @@ namespace SchoolBorrowingSystem.Controllers
         }
 
         /// <summary>
+        /// Checks whether the equipment with the specified property tag is currently on an active loan.
+        /// </summary>
+        /// <param name="propertyTag">The property tag to check.</param>
+        /// <returns>True if an active (unreturned) slip exists for the equipment; false otherwise.</returns>
+        public bool IsEquipmentBorrowed(string propertyTag)
+        {
+            if (string.IsNullOrWhiteSpace(propertyTag))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _activeSlips.Count; i++)
+            {
+                BorrowSlip slip = _activeSlips[i];
+                if (slip.Equipment != null &&
+                    string.Equals(slip.Equipment.PropertyTag, propertyTag.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Processes an equipment borrow request for an eligible borrower.
         /// Updates equipment availability and coordinates loan durations.
         /// </summary>
