@@ -65,6 +65,8 @@ namespace SchoolBorrowingSystem.UI
             else if (e.KeyCode == Keys.D3) SwitchTab(2);
             else if (e.KeyCode == Keys.D4) SwitchTab(3);
             else if (e.KeyCode == Keys.D5) SwitchTab(4);
+            else if (e.KeyCode == Keys.B) OpenBorrowDialog();
+            else if (e.KeyCode == Keys.R) OpenReturnDialog();
         }
 
         private void BtnNav_Click(object sender, EventArgs e)
@@ -203,6 +205,14 @@ namespace SchoolBorrowingSystem.UI
         private void DgvEquipment_SelectionChanged(object sender, EventArgs e)
         {
             UpdateSelectedAssetDossier();
+        }
+
+        private void DgvActiveSlips_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0)
+            {
+                OpenReturnDialog();
+            }
         }
 
         private void DgvBorrowers_SelectionChanged(object sender, EventArgs e)

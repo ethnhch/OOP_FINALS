@@ -770,6 +770,7 @@ namespace SchoolBorrowingSystem.UI
             this._dgvActiveSlips.Columns.Add("Room", "ROOM");
             this._dgvActiveSlips.Columns.Add("Due", "DUE TIME");
             this._dgvActiveSlips.Columns.Add("Status", "STATUS");
+            this._dgvActiveSlips.CellDoubleClick += new DataGridViewCellEventHandler(this.DgvActiveSlips_CellDoubleClick);
 
             this.actionPanel.BackColor = Color.FromArgb(14, 13, 24);
             this.actionPanel.Controls.Add(this._chkChecklistIntact);
