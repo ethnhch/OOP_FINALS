@@ -92,6 +92,8 @@ namespace SchoolBorrowingSystem.UI
         private TabPage tabBorrowers;
         private Panel pnlBorTop;
         private GtaSearchBox _txtSearchBorrowers;
+        private GtaTileButton btnAddBorrower;
+        private GtaTileButton btnEditBorrower;
         private GtaTileButton btnApplyHold;
         private GtaTileButton btnLiftHold;
         private TableLayoutPanel tlpBorBody;
@@ -206,6 +208,8 @@ namespace SchoolBorrowingSystem.UI
             this.tabBorrowers = new TabPage();
             this.pnlBorTop = new Panel();
             this._txtSearchBorrowers = new GtaSearchBox();
+            this.btnAddBorrower = new GtaTileButton();
+            this.btnEditBorrower = new GtaTileButton();
             this.btnApplyHold = new GtaTileButton();
             this.btnLiftHold = new GtaTileButton();
             this.tlpBorBody = new TableLayoutPanel();
@@ -829,6 +833,8 @@ namespace SchoolBorrowingSystem.UI
 
             this.pnlBorTop.BackColor = Color.FromArgb(14, 13, 24);
             this.pnlBorTop.Controls.Add(this._txtSearchBorrowers);
+            this.pnlBorTop.Controls.Add(this.btnAddBorrower);
+            this.pnlBorTop.Controls.Add(this.btnEditBorrower);
             this.pnlBorTop.Controls.Add(this.btnApplyHold);
             this.pnlBorTop.Controls.Add(this.btnLiftHold);
             this.pnlBorTop.Dock = DockStyle.Top;
@@ -837,19 +843,31 @@ namespace SchoolBorrowingSystem.UI
             this._txtSearchBorrowers.AccentColor = Color.FromArgb(236, 46, 158);
             this._txtSearchBorrowers.Location = new Point(0, 8);
             this._txtSearchBorrowers.Placeholder = "Search ID, name, or department...";
-            this._txtSearchBorrowers.Size = new Size(285, 34);
+            this._txtSearchBorrowers.Size = new Size(260, 34);
             this._txtSearchBorrowers.SearchTextChanged += new EventHandler(this.TxtSearchBorrowers_TextChanged);
 
+            this.btnAddBorrower.AccentColor = Color.FromArgb(72, 232, 214);
+            this.btnAddBorrower.Location = new Point(275, 7);
+            this.btnAddBorrower.Size = new Size(160, 36);
+            this.btnAddBorrower.Text = "+ ADD BORROWER";
+            this.btnAddBorrower.Click += new EventHandler(this.BtnAddBorrower_Click);
+
+            this.btnEditBorrower.AccentColor = Color.FromArgb(255, 196, 134);
+            this.btnEditBorrower.Location = new Point(445, 7);
+            this.btnEditBorrower.Size = new Size(160, 36);
+            this.btnEditBorrower.Text = "EDIT BORROWER";
+            this.btnEditBorrower.Click += new EventHandler(this.BtnEditBorrower_Click);
+
             this.btnApplyHold.AccentColor = Color.FromArgb(255, 68, 96);
-            this.btnApplyHold.Location = new Point(300, 7);
-            this.btnApplyHold.Size = new Size(220, 36);
-            this.btnApplyHold.Text = "★ APPLY CLEARANCE HOLD";
+            this.btnApplyHold.Location = new Point(615, 7);
+            this.btnApplyHold.Size = new Size(190, 36);
+            this.btnApplyHold.Text = "★ APPLY HOLD";
             this.btnApplyHold.Click += new EventHandler(this.BtnApplyHold_Click);
 
             this.btnLiftHold.AccentColor = Color.FromArgb(56, 238, 170);
-            this.btnLiftHold.Location = new Point(530, 7);
-            this.btnLiftHold.Size = new Size(210, 36);
-            this.btnLiftHold.Text = "LIFT CLEARANCE HOLD";
+            this.btnLiftHold.Location = new Point(815, 7);
+            this.btnLiftHold.Size = new Size(170, 36);
+            this.btnLiftHold.Text = "LIFT HOLD";
             this.btnLiftHold.Click += new EventHandler(this.BtnLiftHold_Click);
 
             this.tlpBorBody.ColumnCount = 2;

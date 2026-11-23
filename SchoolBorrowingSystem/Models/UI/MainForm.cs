@@ -621,6 +621,62 @@ namespace SchoolBorrowingSystem.UI
             }
         }
 
+        private void BtnAddBorrower_Click(object sender, EventArgs e)
+        {
+            AudioHelper.PlayMenuClick();
+            using (var dlg = new BorrowerForm(_borrowers))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.ResultBorrower != null)
+                {
+                    _borrowers.Add(dlg.ResultBorrower);
+                    if (_dataStore != null)
+                    {
+                        _dataStore.SaveBorrower(dlg.ResultBorrower);
+                    }
+                    RefreshAllViews();
+                    SetStatus(string.Format("Borrower '{0}' ({1}) registered.", dlg.ResultBorrower.FullName, dlg.ResultBorrower.SchoolIDNumber), false);
+                    _toastBanner.ShowBanner("BORROWER ENROLLED", dlg.ResultBorrower.FullName + " added to directory.", GtaPalette.StatusClear);
+                }
+            }
+        }
+
+        private void BtnEditBorrower_Click(object sender, EventArgs e)
+        {
+            string id = GetSelectedFirstCell(_dgvBorrowers);
+            if (string.IsNullOrEmpty(id))
+            {
+                AudioHelper.PlayError();
+                _toastBanner.ShowBanner("NO BORROWER SELECTED", "Select a borrower row to edit.", GtaPalette.StatusWanted);
+                return;
+            }
+
+            SchoolBorrower borrower = null;
+            foreach (var b in _borrowers)
+            {
+                if (string.Equals(b.SchoolIDNumber, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    borrower = b;
+                    break;
+                }
+            }
+            if (borrower == null) return;
+
+            AudioHelper.PlayMenuClick();
+            using (var dlg = new BorrowerForm(_borrowers, borrower))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.ResultBorrower != null)
+                {
+                    if (_dataStore != null)
+                    {
+                        _dataStore.SaveBorrower(dlg.ResultBorrower);
+                    }
+                    RefreshAllViews();
+                    SetStatus(string.Format("Borrower '{0}' profile updated.", dlg.ResultBorrower.FullName), false);
+                    _toastBanner.ShowBanner("PROFILE UPDATED", dlg.ResultBorrower.FullName + " details saved.", GtaPalette.StatusClear);
+                }
+            }
+        }
+
         private void ToggleSelectedBorrowerHold(bool applyHold)
         {
             string id = GetSelectedFirstCell(_dgvBorrowers);
