@@ -593,25 +593,25 @@ namespace SchoolBorrowingSystem.UI
 
             try
             {
-                double penalty = _borrowingController.ProcessReturn(slipId, condition, intact);
+                bool holdApplied = _borrowingController.ProcessReturn(slipId, condition, intact);
                 RefreshAllViews();
 
-                if (penalty > 0)
+                if (holdApplied)
                 {
                     AudioHelper.PlayWarning();
-                    SetStatus(string.Format("Return processed with penalty: PHP {0:N2}. Clearance hold applied!", penalty), true);
-                    _toastBanner.ShowBanner("PENALTY  //  CLEARANCE HOLD", string.Format("Slip {0}: PHP {1:N2} fine applied.", slipId, penalty), GtaPalette.StatusWanted);
+                    SetStatus(string.Format("Return processed. Clearance hold applied to borrower for violation (overdue, damage, or missing parts)."), true);
+                    _toastBanner.ShowBanner("CLEARANCE HOLD APPLIED", string.Format("Slip {0}: Borrower placed on administrative hold.", slipId), GtaPalette.StatusWanted);
                     MessageBox.Show(
-                        string.Format("Return processed for {0}.\n\nPENALTY INCURRED: PHP {1:N2}\nNotice: Borrower has been placed on CLEARANCE HOLD.", slipId, penalty),
-                        "Penalty & Clearance Hold",
+                        string.Format("Equipment return processed for {0}.\n\nNotice: Borrower has been placed on ADMINISTRATIVE CLEARANCE HOLD due to violations (overdue, damage, or missing components).", slipId),
+                        "Clearance Hold Enforced",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                 }
                 else
                 {
                     AudioHelper.PlaySuccess();
-                    SetStatus(string.Format("Slip {0} returned in good standing with PHP 0.00 penalty.", slipId), false);
-                    _toastBanner.ShowBanner("RETURN COMPLETE", string.Format("Slip {0} cleared with PHP 0.00 penalty.", slipId), GtaPalette.StatusClear);
+                    SetStatus(string.Format("Slip {0} returned in good standing.", slipId), false);
+                    _toastBanner.ShowBanner("RETURN COMPLETE", string.Format("Slip {0} cleared in good standing.", slipId), GtaPalette.StatusClear);
                 }
             }
             catch (Exception ex)

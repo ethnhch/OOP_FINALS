@@ -214,16 +214,17 @@ namespace SchoolBorrowingSystem.Controllers
         }
 
         /// <summary>
-        /// Processes the return of borrowed equipment, evaluating condition, completeness,
-        /// overdue penalties, and clearance hold requirements.
+        /// Processes the return of borrowed equipment, evaluating condition, checklist completeness,
+        /// overdue duration, and administrative clearance hold enforcement.
+        /// Fines / penalties are removed per academic specifications; discipline is governed by clearance holds.
         /// </summary>
         /// <param name="slipID">Transaction slip identifier.</param>
         /// <param name="condition">Condition assessment upon return (e.g. Good, Fair, Damaged).</param>
         /// <param name="checklistComplete">Whether all accessories in the return checklist are verified.</param>
-        /// <returns>Total financial penalty / fine incurred (double).</returns>
-        public double ProcessReturn(string slipID, string condition, bool checklistComplete)
+        /// <returns>True if an administrative clearance hold was enforced; false if cleared in good standing.</returns>
+        public bool ProcessReturn(string slipID, string condition, bool checklistComplete)
         {
-            if (string.IsNullOrEmpty(slipID))
+            if (string.IsNullOrWhiteSpace(slipID))
             {
                 throw new ArgumentException("Slip ID cannot be null or empty.", "slipID");
             }
@@ -235,65 +236,33 @@ namespace SchoolBorrowingSystem.Controllers
             }
 
             slip.TimeReturned = DateTime.Now;
-            double totalPenalty = 0.0;
-
-            // 1. Calculate Overdue Fine
-            if (slip.IsOverdue())
-            {
-                TimeSpan overdueSpan = slip.TimeReturned.Value - slip.DueTime;
-                if (slip.Equipment is AVEquipment)
-                {
-                    // AV equipment: 50.00 base + 25.00 per overdue hour
-                    double overdueHours = Math.Max(1.0, Math.Ceiling(overdueSpan.TotalHours));
-                    totalPenalty += 50.00 + ((overdueHours - 1) * 25.00);
-                }
-                else
-                {
-                    // Lab equipment: 100.00 base + 50.00 per overdue day
-                    double overdueDays = Math.Max(1.0, Math.Ceiling(overdueSpan.TotalDays));
-                    totalPenalty += 100.00 + ((overdueDays - 1) * 50.00);
-                }
-            }
-
-            // 2. Incomplete Return Checklist Penalty
-            if (!checklistComplete)
-            {
-                // Fine for missing cables, remotes, or incomplete component count
-                totalPenalty += 150.00;
-            }
-
-            // 3. Equipment Condition Assessment & Repair Coordination
-            string finalCondition = string.IsNullOrEmpty(condition) ? "Good" : condition.Trim();
+            bool isOverdue = slip.IsOverdue();
 
             // Re-resolve live equipment instance from EquipmentController to prevent stale/orphan reference desynchronization
             SchoolEquipment liveItem = (slip.Equipment != null)
                 ? (_equipmentController.FindEquipmentByTag(slip.Equipment.PropertyTag) ?? slip.Equipment)
                 : null;
 
-            if (liveItem != null)
-            {
-                liveItem.Condition = finalCondition;
-                slip.Equipment = liveItem; // Ensure slip points to live instance
-            }
-
+            string finalCondition = string.IsNullOrWhiteSpace(condition) ? "Good" : condition.Trim();
             bool isDamaged = string.Equals(finalCondition, "Damaged", StringComparison.OrdinalIgnoreCase) ||
                              string.Equals(finalCondition, "Needs Repair", StringComparison.OrdinalIgnoreCase) ||
                              string.Equals(finalCondition, "Broken", StringComparison.OrdinalIgnoreCase);
 
             if (isDamaged)
             {
-                totalPenalty += 300.00; // Damage restoration fee
                 if (liveItem != null)
                 {
+                    liveItem.Condition = "Under Repair";
                     _equipmentController.MarkForRepair(liveItem.PropertyTag);
                 }
             }
-            else if (checklistComplete)
+            else if (!checklistComplete)
             {
-                // Return item back to active circulation
+                // Incomplete checklist retains item as unavailable and updates condition accurately
                 if (liveItem != null)
                 {
-                    liveItem.IsAvailable = true;
+                    liveItem.Condition = "Missing Accessories / Incomplete";
+                    liveItem.IsAvailable = false;
                     if (_store != null)
                     {
                         _store.SaveEquipment(liveItem);
@@ -302,10 +271,11 @@ namespace SchoolBorrowingSystem.Controllers
             }
             else
             {
-                // Incomplete checklist retains item as unavailable until accessories are retrieved
+                // Return item back to active circulation in Good standing
                 if (liveItem != null)
                 {
-                    liveItem.IsAvailable = false;
+                    liveItem.Condition = finalCondition;
+                    liveItem.IsAvailable = true;
                     if (_store != null)
                     {
                         _store.SaveEquipment(liveItem);
@@ -313,8 +283,14 @@ namespace SchoolBorrowingSystem.Controllers
                 }
             }
 
-            // 4. Apply clearance hold if violations occur
-            if (totalPenalty > 0 || isDamaged || !checklistComplete)
+            if (liveItem != null)
+            {
+                slip.Equipment = liveItem;
+            }
+
+            // Apply administrative clearance hold if violations occur (overdue, damaged, or missing parts)
+            bool holdRequired = isOverdue || isDamaged || !checklistComplete;
+            if (holdRequired && slip.Borrower != null)
             {
                 ApplyClearanceHold(slip.Borrower);
             }
@@ -325,10 +301,10 @@ namespace SchoolBorrowingSystem.Controllers
 
             if (_store != null)
             {
-                _store.SaveSlip(slip); // slip + equipment state + borrower hold, in one transaction
+                _store.SaveSlip(slip); // slip + equipment state + borrower hold
             }
 
-            return totalPenalty;
+            return holdRequired;
         }
 
         /// <summary>

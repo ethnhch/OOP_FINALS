@@ -160,14 +160,14 @@ namespace SchoolBorrowingSystem.UI
 
             if (flags.Count > 0)
             {
-                lblRiskBanner.Text = "★★★ PENALTY & CLEARANCE HOLD RISK  //  " + string.Join(" + ", flags);
+                lblRiskBanner.Text = "★★★ CLEARANCE HOLD RISK  //  " + string.Join(" + ", flags);
                 lblRiskBanner.ForeColor = GtaPalette.StatusWanted;
                 cardInspection.AccentColor = GtaPalette.StatusWanted;
                 btnProcess.AccentColor = GtaPalette.StatusWanted;
             }
             else
             {
-                lblRiskBanner.Text = "✓ CLEAN INSPECTION  //  GOOD STANDING • PHP 0.00 PENALTY EXPECTED";
+                lblRiskBanner.Text = "✓ CLEAN INSPECTION  //  GOOD STANDING • ALL CLEAR";
                 lblRiskBanner.ForeColor = GtaPalette.StatusClear;
                 cardInspection.AccentColor = GtaPalette.SunsetPeach;
                 btnProcess.AccentColor = GtaPalette.StatusClear;
@@ -192,13 +192,13 @@ namespace SchoolBorrowingSystem.UI
 
             try
             {
-                double penalty = _borrowingController.ProcessReturn(selectedSlip.SlipID, condition, intact);
-                if (penalty > 0)
+                bool holdApplied = _borrowingController.ProcessReturn(selectedSlip.SlipID, condition, intact);
+                if (holdApplied)
                 {
                     AudioHelper.PlayWarning();
                     MessageBox.Show(
-                        string.Format("Return processed for {0}.\n\nPENALTY INCURRED: PHP {1:N2}\nNotice: Borrower has been placed on CLEARANCE HOLD.", selectedSlip.SlipID, penalty),
-                        "Penalty & Clearance Hold",
+                        string.Format("Return processed for {0}.\n\nNotice: Borrower has been placed on ADMINISTRATIVE CLEARANCE HOLD due to violations (overdue, damage, or missing components).", selectedSlip.SlipID),
+                        "Clearance Hold Applied",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                 }
@@ -206,7 +206,7 @@ namespace SchoolBorrowingSystem.UI
                 {
                     AudioHelper.PlaySuccess();
                     MessageBox.Show(
-                        string.Format("Slip {0} returned in good standing with PHP 0.00 penalty!", selectedSlip.SlipID),
+                        string.Format("Slip {0} returned in good standing!", selectedSlip.SlipID),
                         "Return Complete",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
