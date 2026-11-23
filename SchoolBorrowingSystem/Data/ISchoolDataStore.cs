@@ -20,11 +20,17 @@ namespace SchoolBorrowingSystem.Data
         /// <summary>Inserts the equipment, or updates it if the PropertyTag already exists.</summary>
         void SaveEquipment(SchoolEquipment item);
 
+        /// <summary>Deletes the equipment record with the specified property tag.</summary>
+        void DeleteEquipment(string propertyTag);
+
         /// <summary>Loads all equipment as AVEquipment / LabEquipment objects.</summary>
         List<SchoolEquipment> LoadEquipment();
 
         /// <summary>Inserts the borrower, or updates it if the school ID already exists.</summary>
         void SaveBorrower(SchoolBorrower borrower);
+
+        /// <summary>Deletes the borrower record with the specified school ID.</summary>
+        void DeleteBorrower(string schoolIdNumber);
 
         /// <summary>Loads all borrowers.</summary>
         List<SchoolBorrower> LoadBorrowers();

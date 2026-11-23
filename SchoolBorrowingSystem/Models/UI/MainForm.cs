@@ -14,13 +14,15 @@ namespace SchoolBorrowingSystem.UI
         private readonly EquipmentController _equipmentController;
         private readonly BorrowingController _borrowingController;
         private readonly IList<SchoolBorrower> _borrowers;
+        private readonly ISchoolDataStore _dataStore;
 
-        public MainForm(EquipmentController equipmentController, BorrowingController borrowingController, IList<SchoolBorrower> borrowers)
+        public MainForm(EquipmentController equipmentController, BorrowingController borrowingController, IList<SchoolBorrower> borrowers, ISchoolDataStore dataStore = null)
             : this()
         {
             _equipmentController = equipmentController;
             _borrowingController = borrowingController;
             _borrowers = borrowers;
+            _dataStore = dataStore;
 
             RefreshAllViews();
         }
@@ -285,9 +287,28 @@ namespace SchoolBorrowingSystem.UI
             try
             {
                 _equipmentController.SaveInventory();
+                if (_dataStore != null)
+                {
+                    foreach (var eq in _equipmentController.GetAllEquipment())
+                    {
+                        _dataStore.SaveEquipment(eq);
+                    }
+                    foreach (var b in _borrowers)
+                    {
+                        _dataStore.SaveBorrower(b);
+                    }
+                    foreach (var s in _borrowingController.GetActiveSlips())
+                    {
+                        _dataStore.SaveSlip(s);
+                    }
+                    foreach (var s in _borrowingController.GetHistoricalSlips())
+                    {
+                        _dataStore.SaveSlip(s);
+                    }
+                }
                 AudioHelper.PlaySuccess();
-                SetStatus("Inventory saved to 'school_inventory.txt'.", false);
-                _toastBanner.ShowBanner("INVENTORY SAVED", "Synced safely to school_inventory.txt.", GtaPalette.StatusClear);
+                SetStatus("Inventory & system database saved successfully.", false);
+                _toastBanner.ShowBanner("DATABASE & INVENTORY SAVED", "All equipment, borrowers, and slips persisted.", GtaPalette.StatusClear);
             }
             catch (Exception ex)
             {
@@ -301,11 +322,26 @@ namespace SchoolBorrowingSystem.UI
         {
             try
             {
-                _equipmentController.LoadInventory();
+                if (_dataStore != null && !_dataStore.IsEmpty())
+                {
+                    var loadedEq = _dataStore.LoadEquipment();
+                    _equipmentController.RestoreInventory(loadedEq);
+
+                    var loadedBorrowers = _dataStore.LoadBorrowers();
+                    _borrowers.Clear();
+                    foreach (var b in loadedBorrowers) _borrowers.Add(b);
+
+                    var loadedSlips = _dataStore.LoadSlips(_borrowers, _equipmentController.GetAllEquipment());
+                    _borrowingController.RestoreSlips(loadedSlips);
+                }
+                else
+                {
+                    _equipmentController.LoadInventory();
+                }
                 RefreshAllViews();
                 AudioHelper.PlaySuccess();
-                SetStatus("Inventory loaded from disk.", false);
-                _toastBanner.ShowBanner("INVENTORY LOADED", "Registry synced from school_inventory.txt.", GtaPalette.ViceTeal);
+                SetStatus("Inventory & system database loaded successfully.", false);
+                _toastBanner.ShowBanner("DATABASE LOADED", "Registry synced from data store.", GtaPalette.ViceTeal);
             }
             catch (Exception ex)
             {

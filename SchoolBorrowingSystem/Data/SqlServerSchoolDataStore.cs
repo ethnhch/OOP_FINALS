@@ -99,12 +99,7 @@ IF @@ROWCOUNT = 0
 
         public SqlServerSchoolDataStore(string mdfFilePath)
         {
-            if (string.IsNullOrEmpty(mdfFilePath))
-            {
-                throw new ArgumentException("Database file path cannot be empty.", "mdfFilePath");
-            }
-
-            DatabaseFilePath = Path.GetFullPath(mdfFilePath);
+            DatabaseFilePath = ResolveMdfPath(mdfFilePath);
 
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
             builder.DataSource = @"(LocalDB)\MSSQLLocalDB";
@@ -114,6 +109,49 @@ IF @@ROWCOUNT = 0
 
             // LocalDB has no certificate, so encryption is turned off for the local connection.
             _connectionString = builder.ConnectionString + ";Encrypt=False";
+        }
+
+        private static string ResolveMdfPath(string mdfFilePath)
+        {
+            if (!string.IsNullOrEmpty(mdfFilePath) && File.Exists(mdfFilePath))
+            {
+                return Path.GetFullPath(mdfFilePath);
+            }
+
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string targetPath = Path.Combine(baseDir, DefaultFileName);
+            if (File.Exists(targetPath)) return targetPath;
+
+            string[] searchPaths = new string[]
+            {
+                Path.Combine(baseDir, "..", "..", "..", DefaultFileName),
+                Path.Combine(Directory.GetCurrentDirectory(), DefaultFileName),
+                Path.Combine(Directory.GetCurrentDirectory(), "SchoolBorrowingSystem", DefaultFileName)
+            };
+
+            foreach (string candidate in searchPaths)
+            {
+                if (File.Exists(candidate))
+                {
+                    try
+                    {
+                        File.Copy(candidate, targetPath, false);
+                        string logCandidate = Path.ChangeExtension(candidate, "_log.ldf");
+                        string logTarget = Path.ChangeExtension(targetPath, "_log.ldf");
+                        if (File.Exists(logCandidate) && !File.Exists(logTarget))
+                        {
+                            File.Copy(logCandidate, logTarget, false);
+                        }
+                        return targetPath;
+                    }
+                    catch
+                    {
+                        return Path.GetFullPath(candidate);
+                    }
+                }
+            }
+
+            return Path.GetFullPath(mdfFilePath ?? targetPath);
         }
 
         public void Initialize()
@@ -155,6 +193,18 @@ IF @@ROWCOUNT = 0
             using (SqlConnection conn = OpenConnection())
             {
                 UpsertEquipment(conn, null, item);
+            }
+        }
+
+        public void DeleteEquipment(string propertyTag)
+        {
+            if (string.IsNullOrWhiteSpace(propertyTag)) return;
+
+            using (SqlConnection conn = OpenConnection())
+            using (SqlCommand cmd = CreateCommand(conn, null, "DELETE FROM dbo.Equipment WHERE PropertyTag = @tag;"))
+            {
+                Bind(cmd, "@tag", propertyTag.Trim());
+                cmd.ExecuteNonQuery();
             }
         }
 
@@ -208,6 +258,18 @@ IF @@ROWCOUNT = 0
             using (SqlConnection conn = OpenConnection())
             {
                 UpsertBorrower(conn, null, borrower);
+            }
+        }
+
+        public void DeleteBorrower(string schoolIdNumber)
+        {
+            if (string.IsNullOrWhiteSpace(schoolIdNumber)) return;
+
+            using (SqlConnection conn = OpenConnection())
+            using (SqlCommand cmd = CreateCommand(conn, null, "DELETE FROM dbo.Borrowers WHERE SchoolIDNumber = @id;"))
+            {
+                Bind(cmd, "@id", schoolIdNumber.Trim());
+                cmd.ExecuteNonQuery();
             }
         }
 

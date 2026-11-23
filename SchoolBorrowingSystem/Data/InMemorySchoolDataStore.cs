@@ -51,6 +51,15 @@ namespace SchoolBorrowingSystem.Data
             }
         }
 
+        public void DeleteEquipment(string propertyTag)
+        {
+            int index = _equipment.FindIndex(e => string.Equals(e.PropertyTag, propertyTag, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+            {
+                _equipment.RemoveAt(index);
+            }
+        }
+
         public List<SchoolEquipment> LoadEquipment()
         {
             List<SchoolEquipment> result = new List<SchoolEquipment>();
@@ -73,6 +82,15 @@ namespace SchoolBorrowingSystem.Data
             else
             {
                 _borrowers.Add(copy);
+            }
+        }
+
+        public void DeleteBorrower(string schoolIdNumber)
+        {
+            int index = _borrowers.FindIndex(b => string.Equals(b.SchoolIDNumber, schoolIdNumber, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+            {
+                _borrowers.RemoveAt(index);
             }
         }
 
